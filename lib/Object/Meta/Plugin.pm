@@ -11,7 +11,7 @@ use warnings;
 
 use autouse Carp => qw(croak);
 
-our $VERSION = "0.02_01";
+our $VERSION = "0.02_02";
 
 sub init { # defined.
 	my $self = shift;

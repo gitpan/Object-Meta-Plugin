@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Greedy.pm,v 1.4 2003/12/03 01:31:41 nothingmuch Exp $
+# $Id: Greedy.pm,v 1.6 2003/12/03 23:12:51 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful::Greedy;
 
@@ -9,28 +9,22 @@ use warnings;
 use base 'Object::Meta::Plugin::Useful';
 
 use Devel::Symdump;
+use Class::ISA;
 
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 
 sub exports {
 	my $self = shift;
 	
-	return _filter(_collect_functions(ref $self));
-	
-	sub _collect_functions {
-		my $pkg = shift;
-		my @f = map { s/.*:://; $_ } Devel::Symdump->new($pkg)->functions();;
-		
-		my $isaisa;
-		no strict 'refs';
-		foreach $isaisa (@{"$pkg\::ISA"}) {
-			push @f, _collect_functions($isaisa);
-		}
-		@f;
-	}
+	return $self->_filter(
+		map { s/.*:://; $_ }
+		map { Devel::Symdump->new($_)->functions() }
+		($_, Class::ISA::super_path($_))
+	) for ref $self;
 }
 
 sub _filter {
+	my $self = shift;;
 	my %seen;
 	return grep { not $seen{$_}++ } grep { !/^(?:
 		croak	|
@@ -51,7 +45,7 @@ __END__
 
 =head1 NAME
 
-Object::Meta::Plugin::Useful::Greedy - a plugin base class which gobbles up reasonable parts of the symbol table at export time.
+Object::Meta::Plugin::Useful::Greedy - a useful plugin base class which gobbles up reasonable parts of the symbol table at export time.
 
 =head1 SYNOPSIS
 
@@ -115,13 +109,7 @@ Peh! You must be kididgn!
 
 =head1 TODO
 
-=over 4
-
-=item *
-
-Switch @ISA trace to L<Class::ISA>. One more prerequisite can't hurt.
-
-=back
+Nothing right now.
 
 =head1 COPYRIGHT & LICENSE
 

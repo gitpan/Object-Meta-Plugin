@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Meta.pm,v 1.4 2003/12/03 01:31:41 nothingmuch Exp $
+# $Id: Meta.pm,v 1.5 2003/12/03 14:40:48 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful::Meta; # a plugin base class which subclasses Object::Meta::Plugin::Host - a meta plugin
 
@@ -34,7 +34,7 @@ __END__
 
 =head1 NAME
 
-Object::Meta::Plugin::Useful::Meta - a subclass of L<Object::Meta::Plugin::Useful> and L<Object::Meta::Plugin::Host>, base class for hosts which are plugins.
+Object::Meta::Plugin::Useful::Meta - a subclass of Object::Meta::Plugin::Useful and Object::Meta::Plugin::Host, base class for hosts which are plugins.
 
 =head1 SYNOPSIS
 

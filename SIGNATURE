@@ -14,27 +14,27 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA1
 
-SHA1 e79c8b0a425b300460b11a4f2741d0a2323d0082 Build.PL
+SHA1 811450587e16441c06e796984a9ec160690bb1a1 Build.PL
 SHA1 d308b392876a79e39f73ebfea24324e6dda9f4d3 MANIFEST
-SHA1 6042cff7834adf74bf1eb4009c6a918536faa141 META.yml
-SHA1 f9e141776a2452394d0f8e943b4ae1c330306d1f Makefile.PL
+SHA1 8a4fe333f8cc603ea18b492240859ef1348d5269 META.yml
+SHA1 9f986febad38222ee345656f2254202df06404a8 Makefile.PL
 SHA1 147c23f096e8ffe881d7bf101e134d9ff8b9bc63 README
-SHA1 3e5b7c90bf54a9a4964a8eaa77d6cc69cb88e9c8 lib/Object/Meta/Plugin.pm
+SHA1 8f88ec178d21e139cf5fbd4598863ba26dc2f011 lib/Object/Meta/Plugin.pm
 SHA1 5cc9e6ea97e48a3682a3f96dcb1ba9eda00d6515 lib/Object/Meta/Plugin/ExportList.pm
 SHA1 a07b5747af23cc11b395a64c4bd4cd3af0637117 lib/Object/Meta/Plugin/Host.pm
 SHA1 133023769af0ce6f3caf0675f052b79f87a45411 lib/Object/Meta/Plugin/Useful.pm
 SHA1 10912ea4dad7e03b6a895ae950b442538852e7c5 lib/Object/Meta/Plugin/Useful/Generic.pm
-SHA1 c7f9cc9fa18131553cc1cd5cba0ed23d1c54b02a lib/Object/Meta/Plugin/Useful/Greedy.pm
-SHA1 41123d8f61146da42e19eae4a16d91d92ab2028e lib/Object/Meta/Plugin/Useful/Meta.pm
+SHA1 4c08216b532a829bb1f1e9c0938ee993e97d565b lib/Object/Meta/Plugin/Useful/Greedy.pm
+SHA1 6feeb726e9198f47f3712d190c6e29fec8a024a6 lib/Object/Meta/Plugin/Useful/Meta.pm
 SHA1 9519cb0fa26c8f22f946da696e7743a087af815e t/basic.t
 SHA1 b012f1ca72931588c3b06b38d1dab1cf437ae7d9 t/error_handling.t
-SHA1 5fb56d234aca18332f1d880de1c205aae540a37e t/extremes.t
+SHA1 fa86693539653de36db829c13996c8bf48bc5140 t/extremes.t
 SHA1 0fc2b6e64e2cb115c3fd1bc820db59485db9123f t/greedy.t
 SHA1 1230b12a1e20a9b49c16e6edb1f2fcf830db7827 t/lib/OMPTest.pm
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.2.3 (Darwin)
 
-iD8DBQE/zUzqVCwRwOvSdBgRAhjsAJ9t0UGPS+dW0O6Qo7MoXH8j9EgNvACcCX7E
-7sZYDbwlndBH39Gir5ltdH4=
-=hgC3
+iD8DBQE/z5k2VCwRwOvSdBgRAj3zAKC4gHSKkSCAJtDN+eDwgn5G4cZFsQCgvQ+E
+nK0RWBEnooOMpEd6s9/S/xs=
+=26kL
 -----END PGP SIGNATURE-----
