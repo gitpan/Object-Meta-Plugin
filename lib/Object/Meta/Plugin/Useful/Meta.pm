@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Meta.pm,v 1.2 2003/11/29 14:48:37 nothingmuch Exp $
+# $Id: Meta.pm,v 1.4 2003/12/03 01:31:41 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful::Meta; # a plugin base class which subclasses Object::Meta::Plugin::Host - a meta plugin
 
@@ -7,6 +7,8 @@ use strict;
 use warnings;
 
 use base qw/Object::Meta::Plugin::Host Object::Meta::Plugin::Useful/;
+
+our $VERSION = 0.01;
 
 sub new {
 	my $pkg = shift;
@@ -32,7 +34,7 @@ __END__
 
 =head1 NAME
 
-Object::Meta::Plugin::Useful::Meta - a subclass of Object::Meta::Plugin::Useful and Object::Meta::Plugin::Host, base class for hosts which are plugins.
+Object::Meta::Plugin::Useful::Meta - a subclass of L<Object::Meta::Plugin::Useful> and L<Object::Meta::Plugin::Host>, base class for hosts which are plugins.
 
 =head1 SYNOPSIS
 
@@ -47,6 +49,20 @@ Object::Meta::Plugin::Useful::Meta - a subclass of Object::Meta::Plugin::Useful 
 =head1 DESCRIPTION
 
 This is an L<Object::Meta::Plugin::Host> and more. It provides the necessary methods to treat a host as a plugin. It is not the most elegant solution, see C<CAVEATS>.
+
+=head1 METHODS
+
+=over 4
+
+=item new
+
+Overrides the default L<Object::Meta::Plugin::Host> constructor, and adds more data to the internal structures.
+
+=item exports
+
+Returns the methods of the host it subclasses.
+
+=back
 
 =head1 CAVEATS
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: OMPTest.pm,v 1.4 2003/11/29 14:34:17 nothingmuch Exp $
+# $Id: OMPTest.pm,v 1.5 2003/12/03 02:16:20 nothingmuch Exp $
 
 use strict;
 use warnings;
@@ -147,7 +147,7 @@ sub bar { #### nothing returns, also relies on gorch to be defined by someone
 	$self->super->gorch($obj);
 }
 
-package OMPTest::Plugin::Funny; # used within a plugged host
+package OMPTest::Plugin::Funny; # used within a plugged host, to bail into a higherlevel host
 
 use strict;
 use warnings;
@@ -160,7 +160,7 @@ sub gorch {
 	my $self = shift;
 	my $obj = shift;
 	$obj->add();
-	$self->super->super->ding($obj);
+	$self->super->super->ding($obj); # note double super
 }
 
 package OMPTest::Plugin::MetaPlugin;
@@ -191,6 +191,109 @@ sub exports { # if $self->can(super) return self->super->methods, whatever. Othe
 	} else {
 		$self->SUPER::exports(@_);
 	}
+}
+
+package OMPTest::Plugin::Nosey;
+
+use strict;
+use warnings;
+
+use base 'OMPTest::Plugin::Generic';
+
+sub new { $_[0]->SUPER::new(qw/foo bar gorch/) };
+
+sub foo {
+	my $self = shift;
+	my $obj = shift;
+	
+	return [] unless join(" ", sort keys %$self) eq join(" ", sort qw/what exports exported/);# methods have no whitespace, so i was sloppy
+	
+	$obj->add();
+	my $method = $self->{what} if exists $self->{what};
+	$method or return [];
+	$self->$method($obj);
+}
+
+sub bar {
+	my $self = shift;
+	my $obj = shift;
+	$obj->add($obj);
+}
+
+sub gorch {
+	my $self = shift;
+	my $obj = shift;
+	$obj->add($obj)
+}
+
+package OMPTest::Plugin::Wicked; # i didn't know what else to name it
+
+use base 'OMPTest::Plugin::Generic';
+
+use Object::Meta::Plugin::Host;
+
+sub new { # make sure we /don't/ get an error.
+	my $self = $_[0]->SUPER::new(qw/foo bar gorch/);
+	tie my %hash, 'Object::Meta::Plugin::Host::Context::TiedSelf::HASH', { plugin => $self };
+	bless \%hash, ref $self;
+}
+
+sub init {
+	my $self = shift;
+	my $x = $self->SUPER::init(@_);
+	$x->info->style('explicit') unless (@_);
+	$x;
+}
+
+sub foo {
+	my $self = shift;
+	my $obj = shift;
+	$obj->add();
+	
+	return [] unless join(" ", sort keys %$self) eq join(" ", sort qw/host instance plugin/);
+	return [] unless join(" ", sort keys %{ $self->self() }) eq join(" ", sort qw/what exports exported/);
+	
+	my $method = $self->self->{what} if exists $self->self->{what};
+	$self->$method($obj);
+}
+
+sub bar {
+	my $self = shift;
+	my $obj = shift;
+	$obj->add($obj);
+}
+
+sub gorch {
+	my $self = shift;
+	my $obj = shift;
+	$obj->add($obj)
+}
+
+package OMPTest::Plugin::Classless;
+
+use strict;
+use warnings;
+
+sub init {
+	
+	Object::Meta::Plugin::ExportList->new(grep { !/Class::Classless::CALLSTATE=ARRAY\(0x[0-9a-f]+\)/ } @_);
+}
+
+sub exports {
+	qw/foo bar/;
+}
+
+sub foo {
+	my $self = shift;
+	my $obj = pop; # pop is because Class::Classless adds a CALLSTATE object
+	$obj->add();
+	$self->bar($obj);
+}
+
+sub bar {
+	my $self = shift;
+	my $obj = pop;
+	$obj->add();
 }
 
 package OMPTest::Object::Thingy; # records who used it
@@ -230,12 +333,23 @@ package OMPTest::Plugin::Naughty::Crap;
 sub new { bless {}, shift}
 sub init { bless {}, 'NotReallyAnExportList' };
 
-package OMPtest::Plugin::Naughty::Exports;
+package OMPTest::Plugin::Naughty::Exports;
 
 sub new { bless {}, shift }
 sub exports { qw/method_i_have method_i_dont_have/ };
 sub init { Object::Meta::Plugin::ExportList->new($_[0]) };
 sub method_i_have {}
+
+package OMPTest::Plugin::Noughty::OffsetDontHave;
+
+use base 'OMPTest::Plugin::Generic';
+
+sub new { $_[0]->SUPER::new(qw/foo/) };
+
+sub foo {
+	my $self = shift;
+	$self->next->ding();
+}
 
 1; # Keep your mother happy.
 

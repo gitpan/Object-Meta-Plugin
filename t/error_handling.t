@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: error_handling.t,v 1.5 2003/11/29 14:48:37 nothingmuch Exp $
+# $Id: error_handling.t,v 1.8 2003/12/03 02:34:48 nothingmuch Exp $
 
 ### these sets of tests are not a model for a efficiency (code or programmer), but rather for clarity.
 ### when editing, please keep in mind that it must be absolutely clear what's going on, to ease debugging when we've forgotten what's going on.
@@ -18,6 +18,8 @@ use Object::Meta::Plugin::Host;
 use lib "t/lib";
 use OMPTest; # auxillery testing libs
 
+our $VERSION = 0.01;
+
 $| = 1; # nicer to pipes
 $\ = "\n"; # less to type?
 
@@ -30,53 +32,67 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		/);
 		
 		eval { $host->foo(OMPTest::Object::Thingy->new()) };
-		return undef unless $@ =~ /^The offset is out of the range of the method stack for foo/;
+		return undef unless $@ =~ /^The offset is outside the bounds of the method stack for "foo"/;
 		
 		eval { $host->gorch(OMPTest::Object::Thingy->new()) };
-		return undef unless $@ =~ /^The offset is out of the range of the method stack for gorch/;
+		return undef unless $@ =~ /^The offset is outside the bounds of the method stack for "gorch"/;
 		
 		return 1;
 	},
-	sub { # 2 bad call
+	sub { # 2 offset autoloader # check for $self->next->method_i_dont_have
+		my $host = Object::Meta::Plugin::Host->new();
+		$host->plug($_->new()) for (qw/
+			OMPTest::Plugin::Nice::One
+			OMPTest::Plugin::Noughty::OffsetDontHave
+		/);
+		eval { $host->foo() };
+		return $@ =~ /^OMPTest::Plugin::Noughty::OffsetDontHave=HASH\(0x[0-9a-f]+\) which requested an offset is not in the stack for the method "ding" which it called/
+	},
+	sub { # 3 bad call
 		my $host = Object::Meta::Plugin::Host->new();
 		$host->plug($_->new()) for (qw/
 			OMPTest::Plugin::Nice::One
 		/);
-		
 		eval { $host->bar(OMPTest::Object::Thingy->new()) };
 		return $@ =~ /^Can't locate object method "bar" via any plugin in/
 	},
-	sub { # 3 bad call
+	sub { # 4 bad call
 		my $host = Object::Meta::Plugin::Host->new();
 		eval { $host->next(OMPTest::Object::Thingy->new()) };
-		return $@ =~ /^Method next is reserved for use by the context object/;
-	},
-	sub { # 4 garbage
-		my $host = Object::Meta::Plugin::Host->new();
-		eval { $host->plug(OMPTest::Plugin::Naughty::Nextport->new()) };
-		return $@ =~ /^Method next is reserved for use by the context object/;
+		return $@ =~ /^Method "next" is reserved for use by the context object/;
 	},
 	sub { # 5 garbage
+		my $host = Object::Meta::Plugin::Host->new();
+		eval { $host->plug(OMPTest::Plugin::Naughty::Nextport->new()) };
+		return $@ =~ /^Method "next" is reserved for use by the context object/;
+	},
+	sub { # 6 garbage
 		
 		my $host = Object::Meta::Plugin::Host->new();
 		eval { $host->plug(OMPTest::Plugin::Naughty::Empty->new()) };
-		return $@ =~ /^Doesn't look like a plugin/;
+		return $@ =~ /^OMPTest::Plugin::Naughty::Empty=HASH\(0x[0-9a-f]+\) doesn't look like a plugin/;
 	},
-	sub { # 6 garbage
+	sub { # 7 garbage
 		my $host = Object::Meta::Plugin::Host->new();
 		eval { $host->plug(OMPTest::Plugin::Naughty::Undefs->new()) };
 		return $@ =~ /^init\(\) did not return an export list/;
 	},
-	sub { # 7 garbage
-		my $host = Object::Meta::Plugin::Host->new();
-		eval { $host->plug(OMPTest::Plugin::Naughty::Crap->new()) };
-		return $@ =~ /^That doesn't look like a valid export list/;
-	},
 	sub { # 8 garbage
 		my $host = Object::Meta::Plugin::Host->new();
-		eval { $host->plug(OMPtest::Plugin::Naughty::Exports->new()) };
-		return $@ =~ /^Can't locate object method "method_i_dont_have" via package  "OMPtest::Plugin::Naughty::Exports"/;
+		eval { $host->plug(OMPTest::Plugin::Naughty::Crap->new()) };
+		return $@ =~ /^NotReallyAnExportList=HASH\(0x[0-9a-f]+\) doesn't look like a valid export list/;
 	},
+	sub { # 9 garbage
+		my $host = Object::Meta::Plugin::Host->new();
+		eval { $host->plug(OMPTest::Plugin::Naughty::Exports->new()) };
+		return $@ =~ /^Can't locate object method "method_i_dont_have" via plugin OMPTest::Plugin::Naughty::Exports=HASH\(0x[0-9a-f]+\)/;
+	},
+	sub { # 10 tied plugin which doesn't want explicit access
+		my $host = Object::Meta::Plugin::Host->new();
+		my $xi = Object::Meta::Plugin::ExportList::Info->new();
+		eval { $host->plug(OMPTest::Plugin::Wicked->new(), $xi) }; # override the default exportlist info object
+		return $@ =~ /^You shouldn't use implicit access context shims if the underlying plugin's structure is already tied/
+	}
 );
 
 print "1..", scalar @test; # the number of tests we have
@@ -97,7 +113,7 @@ __END__
 
 =head1 NAME
 
-t/error_handling.t - Test suite to make sure Object::Meta::Plugin expects the unexpected.
+t/error_handling.t - Test suite to make sure L<Object::Meta::Plugin::Host> expects the unexpected.
 
 =head1 DESCRIPTION
 
@@ -115,31 +131,39 @@ This test tries to call prev and next when there are no previous or next plugins
 
 =item 2
 
-This test tries to call an method which isn't there, and expects a proper error.
+This test tries to call a method which is there, but from a plugin with it not defined, via an offset.
 
 =item 3
 
-This test tries to trick C<AUTOLOAD> to call a Object::Meta::Plugin::Host::Context builtin as if it were a method.
+This test tries to call an method which isn't there, and expects a proper error.
 
 =item 4
 
-This test tries to plug in a plugin which defines the method C<next>.
+This test tries to trick C<AUTOLOAD> to call a L<Object::Meta::Plugin::Host::Context> builtin as if it were a method.
 
 =item 5
 
-This test tries to plug an empty class into the host, and expects a proper error.
+This test tries to plug in a plugin which defines the method C<next>.
 
 =item 6
 
-This test tries to plug a class which doesn't function properly (init() returns undef), and expects a proper error.
+This test tries to plug an empty class into the host, and expects a proper error.
 
 =item 7
 
-This test tries to plug a class which looks like it functions properly (init() returns an object), but the values are actually bad (the object init() returns does not have the mandatory methods an export list needs).
+This test tries to plug a class which doesn't function properly (init() returns undef), and expects a proper error.
 
 =item 8
 
-This test tries to plug a plugin which exports a method it doesn'd define.
+This test tries to plug a class which looks like it functions properly (init() returns an object), but the values are actually bad (the object init() returns does not have the mandatory methods an export list needs).
+
+=item 9
+
+This test tries to plug a plugin which exports a method it doesn't define.
+
+=item 10
+
+This makes sure L<Object::Meta::Plugin::Host>'s C<plug> will die if we try to plug in a plugin with a tied data structure, but without explicitly forcing it.
 
 =back
 

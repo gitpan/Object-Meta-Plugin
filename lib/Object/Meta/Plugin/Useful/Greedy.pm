@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Greedy.pm,v 1.2 2003/11/29 14:48:37 nothingmuch Exp $
+# $Id: Greedy.pm,v 1.4 2003/12/03 01:31:41 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful::Greedy;
 
@@ -9,6 +9,8 @@ use warnings;
 use base 'Object::Meta::Plugin::Useful';
 
 use Devel::Symdump;
+
+our $VERSION = 0.01;
 
 sub exports {
 	my $self = shift;
@@ -81,6 +83,10 @@ This is a base class for a pretty standard, pretty easy plugin. When C<export > 
 
 =over 4
 
+=item exports
+
+This rummages it's class's symbol table, and returns a list of method names as filtered by C<_filter>.
+
 =item _filter LIST
 
 This takes a list of method names, and munges it into something. The current example will filter things that don't look pretty, that are a bit too general (new, init, croak), and then fishes out duplicates.
@@ -99,13 +105,23 @@ Does not work on classless objects and such. The plugin in question must be a re
 
 =item *
 
-Relies on the non core module Devel::Symdump.
+Relies on the non core module L<Devel::Symdump>.
 
 =back
 
 =head1 BUGS
 
 Peh! You must be kididgn!
+
+=head1 TODO
+
+=over 4
+
+=item *
+
+Switch @ISA trace to L<Class::ISA>. One more prerequisite can't hurt.
+
+=back
 
 =head1 COPYRIGHT & LICENSE
 

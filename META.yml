@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name: Object-Meta-Plugin
-version: 0.01
+version: 0.02_01
 license: perl
 distribution_type: module
 requires:
@@ -13,26 +13,47 @@ conflicts: {}
 provides:
   Object::Meta::Plugin:
     file: lib/Object/Meta/Plugin.pm
-    version: 0.01
+    version: 0.02_01
   Object::Meta::Plugin::ExportList:
     file: lib/Object/Meta/Plugin/ExportList.pm
-    version: 0.01
+    version: 0.02
+  Object::Meta::Plugin::ExportList::Info:
+    file: lib/Object/Meta/Plugin/ExportList.pm
+    version: 0.02
   Object::Meta::Plugin::Host:
     file: lib/Object/Meta/Plugin/Host.pm
-    version: 0.01
+    version: 0.02
   Object::Meta::Plugin::Host::Context:
     file: lib/Object/Meta/Plugin/Host.pm
-    version: 0.01
+    version: 0.02
   Object::Meta::Plugin::Host::Context::Offset:
     file: lib/Object/Meta/Plugin/Host.pm
-    version: 0.01
+    version: 0.02
+  ? |-
+    Object::Meta::Plugin::Host::Context::TiedSelf::ARRAY
+:
+    file: lib/Object/Meta/Plugin/Host.pm
+    version: 0.02
+  ? |-
+    Object::Meta::Plugin::Host::Context::TiedSelf::HASH
+:
+    file: lib/Object/Meta/Plugin/Host.pm
+    version: 0.02
+  ? |-
+    Object::Meta::Plugin::Host::Context::TiedSelf::SCALAR
+:
+    file: lib/Object/Meta/Plugin/Host.pm
+    version: 0.02
   Object::Meta::Plugin::Useful:
     file: lib/Object/Meta/Plugin/Useful.pm
+    version: 0.01
   Object::Meta::Plugin::Useful::Generic:
     file: lib/Object/Meta/Plugin/Useful/Generic.pm
     version: 0.01
   Object::Meta::Plugin::Useful::Greedy:
     file: lib/Object/Meta/Plugin/Useful/Greedy.pm
+    version: 0.01
   Object::Meta::Plugin::Useful::Meta:
     file: lib/Object/Meta/Plugin/Useful/Meta.pm
+    version: 0.01
 generated_by: Module::Build version 0.21

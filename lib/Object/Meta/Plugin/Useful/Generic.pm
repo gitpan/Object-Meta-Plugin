@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Generic.pm,v 1.1 2003/11/29 14:35:24 nothingmuch Exp $
+# $Id: Generic.pm,v 1.2 2003/12/03 01:31:41 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful::Generic; # an extended base class with some logical features $$$ ## rename to Usefull::Generic;
 
@@ -66,6 +66,10 @@ This provides a very simple base class for a plugin. It uses the method C<export
 =head1 METHODS
 
 =over 4
+
+=item exports
+
+Returns the list of method names as created by C<export>.
 
 =item export METHODS ...
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: basic.t,v 1.6 2003/11/29 14:34:17 nothingmuch Exp $
+# $Id: basic.t,v 1.10 2003/12/03 02:34:47 nothingmuch Exp $
 
 ### these sets of tests are not a model for a efficiency (code or programmer), but rather for clarity.
 ### when editing, please keep in mind that it must be absolutely clear what's going on, to ease debugging when we've forgotten what's going on.
@@ -17,6 +17,8 @@ use Object::Meta::Plugin::Host;
 
 use lib "t/lib";
 use OMPTest;
+
+our $VERSION = 0.02;
 
 $| = 1; # nicer to pipes
 $\ = "\n"; # less to type?
@@ -54,7 +56,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 			qr/Nice::One::gorch$/,
 		);
 		
-		($_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
 	sub { # 4 registering of methods is order sensitive, make sure theres a difference between this test and the previous one
 		# initialize a new set of things
@@ -72,7 +74,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 			qr/Nice::One::gorch$/,
 		);
 		
-		($_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
 	sub { # 5 super method, as well as the more complex lack of thereof
 		my $o = OMPTest::Object::Thingy->new();
@@ -92,7 +94,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 			qr/Nice::One::ding$/,
 		);
 		
-		($_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
 	sub { # 6 offsets
 		my $o = OMPTest::Object::Thingy->new();
@@ -113,7 +115,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 			qr/Nice::One::gorch$/,
 		);
 		
-		($_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
 	sub { # 7 unplugging
 		my $o = OMPTest::Object::Thingy->new();
@@ -138,7 +140,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 			qr/Nice::One::gorch$/,
 		);
 		
-		($_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
 	sub { # 8 multiplicity
 		my $o = OMPTest::Object::Thingy->new();
@@ -161,7 +163,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		### test that multiple instances of the same plugin work
 		
 		### THE FOLLOWING CALL IS ON bar, NOT foo!!!
-		($_ =~ (shift @steps)) or return undef foreach (@{$host->bar($o)}); return not @steps;
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->bar($o)}); return not @steps;
 	},
 	sub { # 9 multpiplicity + unplug
 		my $o = OMPTest::Object::Thingy->new();
@@ -179,7 +181,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 			qr/Nice::One::gorch$/,
 		);
 
-		($_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
 	sub { # 10 hosts as plugins
 		my $o = OMPTest::Object::Thingy->new();
@@ -215,7 +217,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 			qr/Nice::One::ding$/,
 		);
 		
-		($_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 		
 	},
 	sub { # 11 hosts as plugins
@@ -254,7 +256,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 			qr/Nice::One::ding$/,
 		);
 		
-		($_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 		
 	},
 	sub { # 12 unregistering - make sure that ExportLists unmerge correctly
@@ -284,7 +286,71 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		
 		return 1;
 	},
-	sub { # 14 summary - actually retests stuff that was already done, but just in case
+	sub { # 14 tied context shim
+		my $o = OMPTest::Object::Thingy->new();
+		my $host = Object::Meta::Plugin::Host->new();
+		
+		my $p = OMPTest::Plugin::Nosey->new();
+		$p->{what} = "bar";
+		
+		$host->plug($p);
+		
+		my @steps = (
+			qr/Nosey::foo$/,
+			qr/Nosey::bar$/,
+		);
+		
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+	},
+	sub { # 15 tied context shim
+		my $o = OMPTest::Object::Thingy->new();
+		my $host = Object::Meta::Plugin::Host->new();
+		
+		my $p = OMPTest::Plugin::Nosey->new();
+		$p->{what} = "gorch";
+		
+		$host->plug($p);
+		
+		my @steps = (
+			qr/Nosey::foo$/,
+			qr/Nosey::gorch$/,
+		);
+		
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+	},
+	sub { # 16 'standard' (explicit access via $self->self) context shim
+		my $o = OMPTest::Object::Thingy->new();
+		my $host = Object::Meta::Plugin::Host->new();
+		
+		my $p = OMPTest::Plugin::Wicked->new();
+		$p->{what} = "bar";
+		
+		$host->plug($p);
+		
+		my @steps = (
+			qr/Wicked::foo$/,
+			qr/Wicked::bar$/,
+		);
+		
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+	},
+	sub { # 17 'standard' (explicit access via $self->self) context shim
+		my $o = OMPTest::Object::Thingy->new();
+		my $host = Object::Meta::Plugin::Host->new();
+		
+		my $p = OMPTest::Plugin::Wicked->new();
+		$p->{what} = "gorch";
+		
+		$host->plug($p);
+		
+		my @steps = (
+			qr/Wicked::foo$/,
+			qr/Wicked::gorch$/,
+		);
+		
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+	},
+	sub { # 18 summary - actually retests stuff that was already done, but just in case
 		my $o = OMPTest::Object::Thingy->new();
 		my $host = Object::Meta::Plugin::Host->new();
 		$host->plug($_->new()) for (qw/
@@ -306,7 +372,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 			qr/Nice::One::ding$/,
 		);
 		
-		($_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
 );
 
@@ -328,7 +394,7 @@ __END__
 
 =head1 NAME
 
-t/basic.t - Test suite to make sure Object::Meta::Plugin can perform the bare minimum we expect it to.
+t/basic.t - Test suite to make sure L<Object::Meta::Plugin> can perform the bare minimum we expect it to.
 
 =head1 DESCRIPTION
 
@@ -340,7 +406,7 @@ This test suite uses various test plugins under a host several times. The plugin
 
 =item 1
 
-This test ensures that the objects Object::Meta::Plugin::Host and Object::Meta::Plugin::Useful (a useful plugin base class) can be instantiated.
+This test ensures that the objects L<Object::Meta::Plugin::Host> and L<Object::Meta::Plugin::Useful> (a useful plugin base class) can be instantiated.
 
 =item 2
 
@@ -380,7 +446,7 @@ This test creates plugins from hosts, and makes sure that the various context ar
 
 =item 11
 
-This test also creates plugins from hosts, but it's done not with a subclass of Object::Meta::Plugin::Host, but rather with a plugin that provides the necessary functionality from within, and not from without.
+This test also creates plugins from hosts, but it's done not with a subclass of L<Object::Meta::Plugin::Host>, but rather with a plugin that provides the necessary functionality from within, and not from without.
 
 =item 12
 
@@ -392,6 +458,22 @@ This test plugs a plugin, then unregisters some methods. It then plugs methods b
 
 =item 14
 
+This test ensures that the tied access to the plugin's internals via the default style shim works.
+
+=item 15
+
+Same as C<14>
+
+=item 16
+
+This test ensures that the explicit access to the plugin's internals via the explicit style shim works. 
+
+=item 17
+
+Same as 17.
+
+=item 18
+
 This test is some of the aspects of the previous tests combined. It makes use of all of the plugins, at one point or another. It tests offsets, super, but not host-as-plugin.
 
 =back
@@ -400,11 +482,7 @@ This test is some of the aspects of the previous tests combined. It makes use of
 
 =over 4
 
-=item *
-
-Obsess on additional variations based on the current tests.
-
-=back
+Nothing right now.
 
 =head1 COPYRIGHT & LICENSE
 

@@ -1,7 +1,6 @@
 #!/usr/bin/perl
-# $Id: Plugin.pm,v 1.9 2003/11/29 14:48:37 nothingmuch Exp $
+# $Id: Plugin.pm,v 1.12 2003/12/03 02:34:47 nothingmuch Exp $
 
-#$$$
 # to do:
 # circular reference crap. make sure all references which should be weak are weakened.
 
@@ -12,7 +11,7 @@ use warnings;
 
 use autouse Carp => qw(croak);
 
-our $VERSION = 0.01;
+our $VERSION = "0.02_01";
 
 sub init { # defined.
 	my $self = shift;
@@ -71,7 +70,7 @@ It should be noted that the host implementation was designed so that it could be
 
 =item init
 
-This is the one sole method needed to consider an object to be a plugin. Ofcourse, it must also return a proper value. In this implementation it simply croaks. You need to use an L<Object::Meta::Plugin::Useful> variant if you don't want to write it all yourself.
+This is the one sole method needed to consider an object to be a plugin. Of course, it must also return a proper value. In this implementation it simply croaks. You need to use an L<Object::Meta::Plugin::Useful> variant if you don't want to write it all yourself.
 
 =back
 
@@ -85,7 +84,7 @@ The way to access your plugin's data structures, and thus gain data store, is $s
 
 =item *
 
-There's a huge dependancy on every plugin implementing C<can> if C<UNIVERSAL::can> won't work for it. Just do it.
+There's a huge dependency on every plugin's C<can> method. If C<UNIVERSAL::can> won't work for it, just implement it.
 
 =back
 

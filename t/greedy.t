@@ -1,10 +1,12 @@
 #!/usr/bin/perl
-# $Id: greedy.t,v 1.2 2003/11/29 14:48:37 nothingmuch Exp $
+# $Id: greedy.t,v 1.4 2003/12/03 02:34:48 nothingmuch Exp $
 
 use strict;
 use warnings;
 
 BEGIN { eval { require Devel::Symdump } or do { print "1..0 # Skipped: no Devel::Symdump to be found"; exit } }	
+
+our $VERSION = 0.01;
 
 $| = 1; # nicer to pipes
 $\ = "\n"; # less to type?
@@ -50,7 +52,7 @@ __END__
 
 =head1 NAME
 
-t/greedy.t - Test that Object::Meta::Plugin::Useful::Greedy is sane.
+t/greedy.t - Test that L<Object::Meta::Plugin::Useful::Greedy> is sane.
 
 =head1 SYNOPSIS
 
