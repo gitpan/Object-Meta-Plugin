@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: extremes.t,v 1.7 2003/12/07 09:28:22 nothingmuch Exp $
+# $Id: extremes.t,v 1.9 2003/12/10 02:39:33 nothingmuch Exp $
 
 ### these sets of tests are not a model for a efficiency (code or programmer), but rather for clarity.
 ### when editing, please keep in mind that it must be absolutely clear what's going on, to ease debugging when we've forgotten what's going on.
@@ -24,31 +24,31 @@ $| = 1; # nicer to pipes
 $\ = "\n"; # less to type?
 
 my @test = ( # a series of test subs, which return true for success, 0 otherwise
-# 	sub {
-#		return "Class::Classless is still not ready";
-# 		eval { require Class::Classless } or return "can't load required module";
-# 		
-# 		my $o = OMPTest::Object::Thingy->new();
-# 		my $host = Object::Meta::Plugin::Host->new();
-# 		my $p = $Class::Classless::ROOT->clone() if defined $Class::Classless::ROOT;
-# 		
-# 		@{$p->{METHODS}}{qw/init exports foo bar/} = (
-# 			\&OMPTest::Plugin::Classless::init,
-# 			\&OMPTest::Plugin::Classless::exports,
-# 			\&OMPTest::Plugin::Classless::foo,
-# 			\&OMPTest::Plugin::Classless::bar,
-# 		);
-# 		
-# 		$host->plug($p);
-# 		
-# 		my @steps = (
-# 			qr/Classless::foo$/,
-# 			qr/Classless::bar$/,
-# 		);
-# 		
-# 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
-# 	},
-	sub {
+	sub { # 1 Class::Classless
+		eval { require Class::Classless } or return "can't load required module";
+		eval { Class::Classless->VERSION("1.35") }; $@ and return "Class::Classless is too old";
+		
+		my $o = OMPTest::Object::Thingy->new();
+		my $host = Object::Meta::Plugin::Host->new();
+		my $p = $Class::Classless::ROOT->clone() if defined $Class::Classless::ROOT;
+		
+		@{$p->{METHODS}}{qw/init exports foo bar/} = (
+			\&OMPTest::Plugin::Classless::init,
+			\&OMPTest::Plugin::Classless::exports,
+			\&OMPTest::Plugin::Classless::foo,
+			\&OMPTest::Plugin::Classless::bar,
+		);
+		
+		$host->plug($p);
+		
+		my @steps = (
+			qr/Classless::foo$/,
+			qr/Classless::bar$/,
+		);
+		
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+	},
+	sub { # 2 Class::Object
 		eval { require Class::Object } or return "can't load required module";
 
 		my $o = OMPTest::Object::Thingy->new();
@@ -69,7 +69,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
-	sub {
+	sub { # 3 Class::SelfMethods
 		eval { require Class::SelfMethods } or return "can't load required module";
 		sub Class::SelfMethods::DESTROY { }; # shut up that silly warning. I don't think it's my problem.
 		
@@ -92,7 +92,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
-	sub {
+	sub { # 4 Class::Prototyped
 		eval { require Class::Prototyped or return undef; import Class::Prototyped ':EZACCESS'; return 1 } or return "can't load required module";
 		
 		my $o = OMPTest::Object::Thingy->new();
@@ -104,8 +104,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 			bar => \&OMPTest::Plugin::Classless::bar,
 		);
 		
-		my $xi = Object::Meta::Plugin::ExportList::Info->new(qw/style force-tied/); # will probably break if Class::Prototyped changes.
-		$host->plug($p, $xi);
+		$host->plug($p);
 		
 		my @steps = (
 			qr/Classless::foo$/,
@@ -114,32 +113,12 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
-# 	sub {
-# 		return "No solution for code ref objects yet. When tie will cover it, let me know.";
-# 	
-# 		eval { require OO::Closures } or return "can't load required module";
-# 			
-# 		my $o = OMPTest::Object::Thingy->new();
-# 		my $host = Object::Meta::Plugin::Host->new();
-# 		
-# 		my %methods = (
-# 			init => \&OMPTest::Plugin::Classless::init,
-# 			exports => \&OMPTest::Plugin::Classless::exports,
-# 			foo => \&OMPTest::Plugin::Classless::foo,
-# 			bar => \&OMPTest::Plugin::Classless::bar,
-# 		);
-# 		my $p = OO::Closures::create_object (\%methods, {}, !@_);
-# 		
-# 		$host->plug($p);
-# 		
-# 		
-# 		my @steps = (
-# 			qr/Classless::foo$/,
-# 			qr/Classless::bar$/,
-# 		);
-# 		
-# 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
-# 	},
+	sub { # 5 overloaded+tied plugin
+		my $host = Object::Meta::Plugin::Host->new();
+		my $p = OMPTest::Plugin::Weird::Stringified->new();
+		$host->plug($p);
+		return ($host->foo() eq 'foo') ? 1 : undef;
+	},
 );
 
 print "1..", scalar @test; # the number of tests we have
@@ -164,7 +143,7 @@ t/extremes.t - Tests weird ideas that should theoretically be possible. Breaking
 
 =head1 DESCRIPTION
 
-The aim of this test file is to build a set of tests that should work in theory, and do work in practice, now that the implementation is simple andunoptimized.
+The aim of this test file is to build a set of tests that should work in theory, and do work in practice, now that the implementation is simple and unoptimized.
 
 As the L<Object::Meta::Plugin> implementation matures, and becomes more magical, I expect things to break without noticing.
 
@@ -176,19 +155,23 @@ If the standards regarding what works and what doesn't are set now, compatibilit
 
 =item 1
 
-L<Class::Classless>
+This test ensures that a L<Class::Classless> object can be plugged in.
 
 =item 2
 
-L<Class::Object>
+This test ensures that a L<Class::Object>
 
 =item 3
 
-L<Class::Prototyped>
+This test ensures that a L<Class::Prototyped>
 
 =item 4
 
-L<Class::SelfMethods>
+This test ensures that a L<Class::SelfMethods>
+
+=item 5
+
+This test ensures that a plugin with a tied array as it's structure, and an overloaded operator will function as expected.
 
 =back
 

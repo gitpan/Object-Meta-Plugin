@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Greedy.pm,v 1.7 2003/12/07 09:28:22 nothingmuch Exp $
+# $Id: Greedy.pm,v 1.9 2003/12/10 03:52:30 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful::Greedy;
 
@@ -15,27 +15,26 @@ our $VERSION = 0.02;
 
 sub exports {
 	my $self = shift;
+	my %seen;
 	
-	return $self->_filter(
-		map { s/.*:://; $_ }
-		map { Devel::Symdump->new($_)->functions() }
-		($_, Class::ISA::super_path($_))
+	return $self->_filter( # filters the method names
+		grep { not $seen{$_}++ } # filter duplicates
+			map { s/.*:://; $_ } # $_ is any function implemented somewhere in $self's @ISA tree. Removes the namespace of all the functions.
+				map { Devel::Symdump->new($_)->functions() } # $_ is any package that $self is (-a). Returns all the functions in all the packages.
+					($_, Class::ISA::super_path($_)) # $_ is the package of $self, because of the for right below here
 	) for ref $self;
 }
 
 sub _filter {
-	my $self = shift;;
-	my %seen;
-	return grep { not $seen{$_}++ } grep { !/^(?:
-		croak	|
+	shift;
+	return grep { !/^(?:
+		croak	|	# imported into the namespace
 		carp	|
-		exports	|
-		next	|
-		init	|
-		new		
-	)$/x } grep { /^(?!_)\w/ } @_;
+		exports	|	# provided by this class
+		init	|	# provided by the 
+		new			# typically undesired
+	)$/x } grep { /^(?!_)/ } @_;
 }
-
 
 1; # Keep your mother happy.
 
@@ -53,6 +52,10 @@ Object::Meta::Plugin::Useful::Greedy - A useful plugin base class which gobbles 
 
 	use base 'Object::Meta::Plugin::Useful::Greedy';
 
+	sub new {
+		# ...
+	}
+	
 	sub ppretty {
 		# ...
 	}
@@ -83,9 +86,11 @@ This rummages it's class's symbol table, and returns a list of method names as f
 
 =item _filter LIST
 
-This takes a list of method names, and munges it into something. The current example will filter things that don't look pretty, that are a bit too general (new, init, croak), and then fishes out duplicates.
+This takes a list of method names, and munges it into something. The current example will filter things that don't look pretty (don't start with an underscore), and that are probably undesired (C<new>, C<init>, C<exports>, C<carp> & C<croak>).
 
-You really should define it in your class, if you want more control of the patterns.
+You can define C<_filter> in your class, if you want more control of the filtering process.
+
+@_ passed to this method will consist of a duplicate free list of all the bareword method names found in all of the packages that the plugin's class @ISA contains, as determined by L<Class::ISA>.
 
 =back
 
@@ -95,7 +100,7 @@ You really should define it in your class, if you want more control of the patte
 
 =item *
 
-Does not work on classless objects and such. The plugin in question must be a real set of classes, with real symbol tables, and @ISAs and what nots. How dull.
+Does not work on classless objects and such. The plugin in question must be blessed into a real class, with a real symbol table, and a real @ISA full of real classes with real what-nots. How dull.
 
 =item *
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: error_handling.t,v 1.8 2003/12/03 02:34:48 nothingmuch Exp $
+# $Id: error_handling.t,v 1.10 2003/12/11 14:27:17 nothingmuch Exp $
 
 ### these sets of tests are not a model for a efficiency (code or programmer), but rather for clarity.
 ### when editing, please keep in mind that it must be absolutely clear what's going on, to ease debugging when we've forgotten what's going on.
@@ -30,12 +30,14 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 			OMPTest::Plugin::Upset::Two
 			OMPTest::Plugin::Upset::One
 		/);
+
+		my $m = 'foo'; 
+		eval { $host->$m(OMPTest::Object::Thingy->new(), $host->$m()) };
+		return undef unless $@ =~ /^The offset is outside the bounds of the method stack for "$m"/;
 		
-		eval { $host->foo(OMPTest::Object::Thingy->new()) };
-		return undef unless $@ =~ /^The offset is outside the bounds of the method stack for "foo"/;
-		
-		eval { $host->gorch(OMPTest::Object::Thingy->new()) };
-		return undef unless $@ =~ /^The offset is outside the bounds of the method stack for "gorch"/;
+		$m = 'gorch';
+		eval { $host->$m(OMPTest::Object::Thingy->new(), $host->$m()) };
+		return undef unless $@ =~ /^The offset is outside the bounds of the method stack for "$m"/;
 		
 		return 1;
 	},
@@ -67,7 +69,6 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		return $@ =~ /^Method "next" is reserved for use by the context object/;
 	},
 	sub { # 6 garbage
-		
 		my $host = Object::Meta::Plugin::Host->new();
 		eval { $host->plug(OMPTest::Plugin::Naughty::Empty->new()) };
 		return $@ =~ /^OMPTest::Plugin::Naughty::Empty=HASH\(0x[0-9a-f]+\) doesn't look like a plugin/;
@@ -90,8 +91,24 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 	sub { # 10 tied plugin which doesn't want explicit access
 		my $host = Object::Meta::Plugin::Host->new();
 		my $xi = Object::Meta::Plugin::ExportList::Info->new();
+		local $SIG{__WARN__} = sub { die @_ }; # make warnings fatal
 		eval { $host->plug(OMPTest::Plugin::Wicked->new(), $xi) }; # override the default exportlist info object
-		return $@ =~ /^You shouldn't use implicit access context shims if the underlying plugin's structure is already tied/
+		return $@ =~ /^You probably shouldn't use implicit access context shims if the underlying plugin's structure is already a tied array. Use the 'tied' style if you want to suppress this message/
+	},
+	sub { # 11 some value which overloads hash
+		my $host = Object::Meta::Plugin::Host->new();
+		my $xi = Object::Meta::Plugin::ExportList::Info->new();
+		local $SIG{__WARN__} = sub { die @_ }; # make warnings fatal
+		eval { $host->plug(OMPTest::Plugin::Noughty::Overloaded->new()) }; # override the default exportlist info object
+		return $@ =~ /^Overloading a plugin's \@{} operator will create unexpected behavior under the implicit style/
+	},
+	sub { # 12 unknown style
+		my $host = Object::Meta::Plugin::Host->new();
+		my $xi = Object::Meta::Plugin::ExportList::Info->new();
+		my $notstyle = "this is not a shim style";
+		$xi->style($notstyle);
+		eval { $host->plug(OMPTest::Plugin::Generic->new(), $xi) }; # override the default exportlist info object
+		return $@ =~ /^Unknown plugin style "$notstyle" for OMPTest::Plugin::Generic=HASH\(0x[0-9a-f]+\)/
 	}
 );
 

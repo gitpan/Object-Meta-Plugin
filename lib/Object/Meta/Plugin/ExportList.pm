@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: ExportList.pm,v 1.4 2003/12/07 09:28:22 nothingmuch Exp $
+# $Id: ExportList.pm,v 1.5 2003/12/10 02:37:24 nothingmuch Exp $
 
 package Object::Meta::Plugin::ExportList; # an object representing the skin of a plugin - what can be plugged and unseamed at the top level.
 
@@ -91,7 +91,7 @@ our $AUTOLOAD;
 sub new {
 	my $pkg = shift;
 	bless {@_ ? @_ : qw/
-		style	tied
+		style	implicit
 	/}, $pkg;
 };
 
@@ -201,9 +201,7 @@ Deletion is not supported.
 
 =item style
 
-This attribute can have one of two values, either I<tied> or I<explicit>. It tells the context shims how to behave. On I<tied>, the default, the shim will have it's structure be a tied one, representing the structure of the plugin. Currently hash, array and scalar refs are supported. Filehandle tie support is a little bit hairy at the moment. The I<explicit> style gives the standard shim structure to the plugin. To gain access to it's structures a plugin will then need to call the method C<self> on the shim, as documented in L<Object::Meta::Plugin::Host>. I<explicit> is probably much more efficient, but is less coder friendly. The value I<force-tied> is honored by L<Object::Meta::Plugin::Host::Context>, and will not die on C<plug> time if you try to use it on a plugin whose structure is already tied.
-
-Again, see L<Object::Meta::Plugin::Host> for documentation of the way styles change things.
+Defines the behavior of the context shim. See L<Object::Meta::Plugin::Host> for a description of how this works.
 
 =back
 

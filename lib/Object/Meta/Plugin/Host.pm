@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Host.pm,v 1.18 2003/12/07 10:23:30 nothingmuch Exp $
+# $Id: Host.pm,v 1.23 2003/12/11 14:27:17 nothingmuch Exp $
 
 package Object::Meta::Plugin::Host;
 
@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use autouse Carp => qw(croak);
+use Scalar::Util qw(reftype);
 use Tie::RefHash;
 
 our $VERSION = 0.02;
@@ -43,12 +44,21 @@ sub plug {
 
 	my $x = $self->register($plugin->init(@_) or croak "init() did not return an export list");
 	
-	if ($x->info->style() eq 'tied'){
+	if ($x->info->style() eq 'implicit'){
 	
-		croak "You shouldn't use implicit access context shims if the underlying plugin's structure is already tied" if do { local $@;
-				eval { tied (%{$plugin}) }
-			||	eval { tied (@{$plugin}) }
-			||	eval { tied (${$plugin}) } };
+		if (reftype($plugin) eq 'ARRAY'){
+			warnings::warnif($plugin,"You probably shouldn't use implicit access context shims if the underlying plugin's structure is already a tied array. Use the 'tied' style if you want to suppress this message") if do { local $@; eval { tied (@{$plugin}) } };
+		} else {
+			warnings::warnif($plugin,"Overloading a plugin's \@{} operator will create unexpected behavior under the implicit style") if (overload::Method($plugin, '@{}'));
+		}
+	} else {
+		STYLE: {
+			foreach my $style (@Object::Meta::Plugin::Host::Context::styles){
+				last STYLE if ($x->info->style() eq $style)
+			}
+			
+			croak "Unknown plugin style \"",$x->info->style(),"\" for $plugin";
+		}
 	}
 	
 	$x;
@@ -95,16 +105,12 @@ sub unregister {
 		
 		$self->plugins->{$x->plugin}->unmerge($x);
 		
-		if ($x->list()){
-			foreach my $method ($x->list()){
-				next unless $self->stack($method);
-				
-				@{ $self->stack($method) } = grep { $_ != $x->plugin } @{ $self->stack($method) };
-				
-				delete $self->methods->{$method} unless (@{ $self->stack($method) });
-			}
-		} else {
-			$self->unplug($x->plugin()); # $$$ should this happen? If a plugin loses all it's registry, is it no longer plugged in? fuss over this one to great lengths.
+		foreach my $method ($x->list()){
+			next unless $self->stack($method);
+			
+			@{ $self->stack($method) } = grep { $_ != $x->plugin } @{ $self->stack($method) };
+			
+			delete $self->methods->{$method} unless (@{ $self->stack($method) });
 		}
 	}
 }
@@ -128,19 +134,25 @@ sub specific {
 sub can { # provide a subref you can goto
 	my $self = shift;
 	my $method = shift;
-	return $self->UNIVERSAL::can($method) || ($self->stack($method) && sub { $AUTOLOAD = "::" . $method; goto &AUTOLOAD }) || undef;
+	return $self->UNIVERSAL::can($method)
+		|| ($self->stack($method) && sub { $AUTOLOAD = $method; goto &AUTOLOAD })
+		|| ($self->UNIVERSAL::can('super') && $self->super->can($method));
 }
 
 sub AUTOLOAD { # where the magic happens
 	my $self = shift;
 	
-	$AUTOLOAD =~ /.*::(.*?)$/;
+	$AUTOLOAD =~ /([^:]*?)$/;
 	my $method = $1;
+	
 	croak "Method \"$method\" is reserved for use by the context object" if Object::Meta::Plugin::Host::Context->UNIVERSAL::can($method); # UNIVERSAL can differs
 	
 	return undef if $method eq 'DESTROY';
-	my $stack = $self->stack($method) or croak "Can't locate object method \"$method\" via any plugin in $self";
-	Object::Meta::Plugin::Host::Context->new($self, ${ $stack }[ $#$stack ])->$method(@_);
+	if (my $stack = $self->stack($method)){
+		Object::Meta::Plugin::Host::Context->new($self, ${ $stack }[ -1 ])->$method(@_);
+	} elsif ($self->can('super')){
+		$self->super->$method(@_);
+	} else { croak "Can't locate object method \"$method\" via any plugin in $self" }
 }
 
 package Object::Meta::Plugin::Host::Context; # the wrapper object which defines the context of a plugin
@@ -154,79 +166,54 @@ use autouse Carp => qw(croak);
 our $VERSION = 0.01;
 our $AUTOLOAD;
 
+our @styles = qw/implicit explicit force-implicit/;
+
 sub new {
 	my $pkg = shift;
 	
-	my $self = bless {
-		host => shift,
-		plugin => shift,
-		instance => shift || 0, # a plugin can be plugged into several slots, each of which needs it's own context
-	}, $pkg;
+	my $self = bless [
+		shift, # host
+		shift, # plugin
+		shift || 0, # instance # a plugin can be plugged into several slots, each of which needs it's own context
+	], $pkg;
 	
-	my $style = $self->{host}->plugins->{$self->{plugin}}->info->style();
+	my $style = $self->host->plugins->{$self->plugin}->info->style();
 
 	return $self if $style eq 'explicit';
-	croak "Unknown plugin style \"$style\" for ${ $self }{plugin}" unless $style eq 'tied' or $style eq 'force-tied';
 
-	SWITCH: { # neater when there's lots to do
-		reftype($self->{plugin}) eq 'HASH' and do {
-			my %hash;
-			tie %hash, __PACKAGE__."::TiedSelf::HASH", $self;
-			$self = \%hash;
-		}, last SWITCH;
-		reftype($self->{plugin}) eq 'ARRAY' and do {
-			my @array;
-			tie @array, __PACKAGE__."::TiedSelf::ARRAY", $self;
-			$self = \@array;
-		}, last SWITCH;
-		reftype($self->{plugin}) eq 'SCALAR' and do {
-			my $scalar;
-			tie $scalar, __PACKAGE__."::TiedSelf::SCALAR", $self;
-			$self = \$scalar;
-		}, last SWITCH;
-		
-		croak "Can only support HASH, ARRAY and SCALR ref types for context tie bridge (${ $self }{plugin}).";
-		
+	reftype($self->plugin) eq 'ARRAY' and do {
+		my @array;
+		tie @array, __PACKAGE__."::TiedSelf", $self;
+		$self = \@array;
 	};
 	
-	bless $self, $pkg;
-	return $self;
+	bless $self, __PACKAGE__."::Overloaded";
 }
 
-sub real { # obtain the value behind the tie, if it's there
-	my $self = shift;
-	
-	local $@;
-	
-	if (reftype($self) ne 'HASH'){ # the natural type for the object
-		return	eval { tied (@{$self}) }
-			||	eval { tied (${$self}) }
-			|| $self;
-	} else {
-		return tied %{$self} || $self;
-	}
-}
-
-### these methods nead C<real> because they access internals
+### these methods access internals
+### they need the real value of $self
 
 sub instance {
-	my $self = shift->real();
-	$self->{instance};	
+	my $self = shift;
+	$self = tied(@$self) || $self;
+	$self->[2];	
 }
 
-sub super { # the real self: Object::Meta::Plugin::Host
-	my $self = shift->real();
-	$self->{host};
+sub super { # the real host
+	my $self = shift;
+	$self = tied(@$self) || $self;
+	$self->[0];
 }
 sub host { goto &super }
 
 sub plugin {
-	my $self = shift->real();
-	$self->{plugin};
+	my $self = shift;
+	$self = tied(@$self) || $self;
+	$self->[1];
 }
 sub self { goto &plugin }
 
-### methods from here on don't access internals and don't need C<real>
+### methods from here on don't access internals
 
 sub offset { # get a context with a numerical offset
 	my $self = shift;
@@ -253,61 +240,41 @@ sub can { # try to return the correct method.
 sub AUTOLOAD {
 	my $self = shift;
 	
-	$AUTOLOAD =~ /.*::(.*?)$/;
+	$AUTOLOAD =~ /([^:]*?)$/;
 	my $method = $1;
 	return undef if $method eq 'DESTROY';
 	
-#	print "$self, ", $self->plugin;
-	
 	if (my $code = $self->plugin->can($method)){ # examine the plugin's export list in the host
-		### stray from magic - this is as worse as it should get
 		unshift @_, $self; # return self to the argument list. Should be O(1). lets hope.
 		goto &$code;
 	} else {
-#		print $self->plugin, " can't $method";
-#		Carp::cluck("exists");
 		$self->host->$method(@_);
 	}
 }
 
-package Object::Meta::Plugin::Host::Context::TiedSelf::SCALAR;
+package Object::Meta::Plugin::Host::Context::Overloaded;
+use base 'Object::Meta::Plugin::Host::Context';
+use overload map { $_, 'plugin' } ('${}', '%{}', '&{}', '*{}', '=', 'nomethod'), fallback => 0;  # all ref types except for arrays, aswell as any other value are simply delegated to the plugin's overloading (if at all). No magic autogeneration is to be performed.
+
+package Object::Meta::Plugin::Host::Context::TiedSelf;
 use base 'Object::Meta::Plugin::Host::Context';
 
-sub TIESCALAR { bless $_[1], $_[0] }
-sub FETCH { ${$_[0]{plugin}} };
-sub STORE { ${$_[0]{plugin}} = $_[1] };
-
-package Object::Meta::Plugin::Host::Context::TiedSelf::ARRAY;
-use base 'Object::Meta::Plugin::Host::Context';
+#use base 'Tie::Array'; # don't bother wasting the time. tie for arrays is thought to be stable. We'll be overriding anyway for efficiency reasons.
 
 sub TIEARRAY { bless $_[1], $_[0] };
-sub FETCH { $_[0]{plugin}[$_[1]] };
-sub STORE { $_[0]{plugin}->[$_[1]] = $_[2] };
-sub FETCHSIZE { scalar @{$_[0]{plugin}} };
-sub STORESIZE { $#{$_[0]{plugin}} = $_[1]-1 };
-sub EXTEND { $#{$_[0]{plugin}} += $_[1] };
-sub EXSISTS { exists $_[0]{plugin}->[$_[1]] };
-sub DELETE { delete $_[0]{plugin}->[$_[1]] };
-sub CLEAR { @{$_[0]{plugin}} = () };
-sub PUSH { push @{$_[0]{plugin}}, $_[1] };
-sub POP { pop @{$_[0]{plugin}} };
-sub SHIFT { shift @{$_[0]{plugin}} };
-sub UNSHIFT { unshift @{$_[0]{plugin}}, $_[1] };
-sub SPLICE { @{$_[0]{plugin}}, @_}
-
-package Object::Meta::Plugin::Host::Context::TiedSelf::HASH;
-use base 'Object::Meta::Plugin::Host::Context';
-
-sub TIEHASH { bless $_[1], $_[0] };
-sub FETCH { $_[0]{plugin}->{$_[1]} };
-sub STORE { $_[0]{plugin}->{$_[1]} = $_[2] };
-sub DELETE { delete $_[0]{plugin}->{$_[1]} };
-sub EXISTS { exists $_[0]{plugin}->{$_[1]} };
-sub CLEAR { %{$_[0]{plugin}} = () };
-sub FIRSTKEY { keys %{$_[0]{plugin}}; each %{$_[0]{plugin}} };
-sub NEXTKEY { each %{$_[0]{plugin}} };
-
-# no filehandle yet. tie is quite dirty for it ((sys)funct - no diff.)
+sub FETCH { $_[0]->plugin->[$_[1]] };
+sub STORE { $_[0]->plugin->[$_[1]] = $_[2] };
+sub FETCHSIZE { scalar @{$_[0]->plugin} };
+sub STORESIZE { $#{$_[0]->plugin} = $_[1]-1 };
+sub EXTEND { $#{$_[0]->plugin} += $_[1] };
+sub EXSISTS { exists $_[0]->plugin->[$_[1]] };
+sub DELETE { delete $_[0]->plugin->[$_[1]] };
+sub CLEAR { @{$_[0]->plugin} = () };
+sub PUSH { push @{$_[0]->plugin}, $_[1] };
+sub POP { pop @{$_[0]->plugin} };
+sub SHIFT { shift @{$_[0]->plugin} };
+sub UNSHIFT { unshift @{$_[0]->plugin}, $_[1] };
+sub SPLICE { @{$_[0]->plugin}, @_}
 
 package Object::Meta::Plugin::Host::Context::Offset; # used to implement next and previous.
 
@@ -326,40 +293,57 @@ sub new {
 		offset => shift,
 		instance => shift || 0,
 	}, $pkg;
-	
+
 	$self;
 }
 
-# $$$ should there be a next and prev method? is $self->next->next() a valid thing to do? It's kind of silly, because $self->offset(-2) acheives the same effect.
-
-sub can { $AUTOLOAD = ref $_[0] . "::can"; goto &AUTOLOAD; }; # $$$ not yet tested. I'm pretty sure AUTOLOAD will not be hit before UNIVERSAL::can is found. It doesn't rally matter if that's not the case.
-sub AUTOLOAD { # it has to be less ugly than this
-	my $self = shift;
-	$AUTOLOAD =~ /.*::(.*?)$/;
-	my $method = $1;
-	return undef if $method eq 'DESTROY';
-
-	my $stack = $self->{host}->stack($method) || croak "Can't locate object method \"$method\" via any plugin in ${ $self }{host}";
+{
+	my $lookup = sub { # a lexical sub, if you will
+		my $self = shift;
+		my $method = shift;
 	
-	my %counts;
-
-	my $i;
-	my $j = $self->{instance};
+		my $stack = $self->{host}->stack($method) || croak "Can't locate object method \"$method\" via any plugin in ${ $self }{host}";
+		
+		my %counts;
 	
-	for ($i = $#$stack; $i >= 0 or croak "${$self}{plugin} which requested an offset is not in the stack for the method \"$method\" which it called"; $i--){
-		${ $stack }[$i] == $self->{plugin} and (-1 == --$j) and last;
-		$counts{ ${ $stack }[$i] }++;
+		my $i;
+		my $j = $self->{instance};
+		
+		for ($i = $#$stack; $i >= 0 or croak "${$self}{plugin} which requested an offset is not in the stack for the method \"$method\" which it called"; $i--){
+			${ $stack }[$i] == $self->{plugin} and (-1 == --$j) and last;
+			$counts{ ${ $stack }[$i] }++ if wantarray;
+		}
+		
+		my $x = $i;
+		$i += $self->{offset};
+		
+		croak "The offset is outside the bounds of the method stack for \"$method\"\n" if ($i > $#$stack or $i < 0);
+		
+		return $stack->[$i] unless wantarray;
+		
+		for (; $x >= $i; $x--){
+			$counts{ ${ $stack }[$x] }++;
+		}
+		
+		return ($stack->[$i], $counts{ $stack->[$i] } - 1);
+		
+		Object::Meta::Plugin::Host::Context->new($self->{host}, ${ $stack }[$i], $counts{${ $stack }[$i]} -1  )->$method(@_);
+	};
+	
+	sub can { # it has to be less ugly than this
+		my $self = shift;
+		my $method = shift;
+	
+		return $self->$lookup($method)->can($method);
 	}
-	
-	my $x = $i;
-	$i += $self->{offset};
-	for (; $x >= $i; $x--){
-		$counts{ ${ $stack }[$x] }++;
+	sub AUTOLOAD { # it has to be less ugly than this
+		my $self = shift;
+		$AUTOLOAD =~ /([^:]*?)$/;
+		my $method = $1;
+		return undef if $method eq 'DESTROY';
+		
+		Object::Meta::Plugin::Host::Context->new($self->{host}, $self->$lookup($method) )->$method(@_);
 	}
-
-	croak "The offset is outside the bounds of the method stack for \"$method\"\n" if ($i > $#$stack or $i < 0);
-	
-	Object::Meta::Plugin::Host::Context->new($self->{host}, ${ $stack }[$i], $counts{${ $stack }[$i]} -1  )->$method(@_);
 }
 
 1; # Keep your mother happy.
@@ -396,7 +380,7 @@ Object::Meta::Plugin::Host - Hosts plugins that work like Object::Meta::Plugin (
 
 Object::Meta::Plugin::Host is an implementation of a plugin host, as illustrated in L<Object::Meta::Plugin>.
 
-The host is not just simply a merged namespace. It is designed to allow various plugins to provide similar capabilities - methods with conflicting namespace. Conflicting namespaces can coexist, and take precedence over, as well as access one another. An examplifying scenario could be an image processor, whose various filter plugins all define the method "process". The plugins are all installed, ordered as the effect should be taken out, and finally atop them all a plugin which wraps them into a pipeline is set. It's process method will look like
+The host is not just simply a merged namespace. It is designed to allow various plugins to provide similar capabilities - methods with conflicting namespace. Conflicting namespaces can coexist, and take precedence over, as well as access one another. An example scenario could be an image processor, whose various filter plugins all define the method "process". The plugins are all installed, ordered as the effect should be taken out, and finally atop them all a plugin which wraps them into a pipeline is set. It's process method will look like
 
 	sub process {
 		my $self = shift;
@@ -414,13 +398,13 @@ The host is not just simply a merged namespace. It is designed to allow various 
 		return $image;
 	}
 
-When a plugin's method is entered it receives, instead of the host object, a context object, particular to itself. The context object allows it access to the host host, the plugin's siblings, and so forth explicitly, while implicitly providing one or two modifications. The first is that all calls against $_[0], which is the context, have an altered method priority - calls will be mapped to the current plugin's method before the host defaults methods. The second, default but optional implicit feature is that all modifications on the reference received in $_[0] are mapped via a tie interface to the original plugin's data structures.
+When a plugin's method is entered it receives, instead of the host object, a context object, particular to itself. The context object allows it access to the host host, the plugin's siblings, and so forth explicitly, while implicitly making one or two changes. The first is that all calls against $_[0], which is the context, are like calls to the host, but have an altered method priority - calls will be mapped to the current plugin's method before the host defaults methods. Moreover, plugin methods which are not installed in the host will also be accessible this way. The second, default but optional implicit change is that all modifications on the reference received in $_[0] are mapped via a tie interface or dereference overloading to the original plugin's data structures.
 
-Such a model enables a dumb plugin to work quite happily with others, even those which may take it's role.
+Such a model enables a dumb/lazy plugin to work quite happily with others, even those which may take it's role.
 
-A more complex plugin, aware that it may not be peerless, could explicitly ask for the default (host defined) methods it calls, instead of it's own. It can request to call a method on the plugin which succeeds it or precedes it in a certain method's stack.
+A more complex plugin, aware that it may not be peerless, could gain access to the host object, to it's original plugin object, could ask for offset method calls, and so forth.
 
-The interface aims to be simple enough to be flexible, trying for the minimum it needs to define in order to be useful, and creating workarounds for the limitations this minimum imposes.
+In short, the interface aims to be simple enough to be flexible, trying for the minimum it needs to define in order to be useful, and creating workarounds for the limitations this minimum imposes.
 
 =head1 METHODS
 
@@ -450,7 +434,7 @@ Returns a context object for a specific plugin. Like C<Context>'s C<next>, C<pre
 
 =item stack METHOD
 
-Returns an array ref to a stack of plugins, for the method. The last element is considered the topmost plugin, which is counter intuitive, considering C<offset> works with higher indices being lower perceedence.
+Returns an array ref to a stack of plugins, for the method. The last element is considered the topmost plugin, which is counter intuitive, considering C<offset> works with higher indices being lower precedence.
 
 =item unplug PLUGIN [ PLUGIN ... ]
 
@@ -490,33 +474,80 @@ Generates a new context, having to do with a plugin n steps away from this, to a
 
 =back
 
-=head1 CONTEXT STYLES (ACCESS TO PLUGIN INTERNALS)
+=head1 CONTEXT OBJECT STYLES (ACCESS TO PLUGIN INTERNALS)
 
-The context shim styles are set by the object returned by the C<info> method of the export list. L<Object::Meta::Plugin::ExportList> will create an info object which will have the C<style> method return I<tied> by default.
+The context shim styles are set by the object returned by the C<info> method of the export list. L<Object::Meta::Plugin::ExportList> will create an info object whose C<style> method will return I<implicit> by default.
 
-=head2 Implicit access via tie
+You can override the info object by sending a new one to the export list constructor. Using the Useful:: implementations this can be acheived by sending the info object as the first argument to C<init>. C<plug> can do it for you:
 
-This way the shim object will be a tied reference, of the type the original plugin's data structure (if it is a hash, array or scalar). The tie will interface to the contents of the original plugin object.
+	my $i = new Object::Meta::Plugin::ExportList::Info;
+	$i->style('explicit');
 
-In this way the plugin object can gain access to it's internals normally, but the methods it calls will be called on the context shim. The context data will be stored in the object behind the tie, and be access via a called to C<tie>.
+	$host->plug($plugin,$i);
 
-This way implicit and complete namespace (context shim & plugin) separation can be made, without the plugin needing to do any tricks. The downsides is that the plugin can't be a blessed glob or code ref, or if the plugin does not behave well regarding blessing and stuff.
+=head2 Implicit
 
-If the plugin is funny tied structure, you have to set the style to 'force-tied', in order for C<plug> not to die. Do this by sending an export list info object as the first argument to a Useful C<init>. But make sure you're not breaking anything.
+=over 4
 
-=head2 Explicit access via $self->self
+=item implicit
 
-This method is theoretically much more efficient.
+=item force-implicit
 
-In this style, the plugin will get the actual structure of the context shim. If tied access is in applicable, that's the way to go.
+=back
+
+This style allows a plugin to pretend it's operating on itself.
+
+The means to alow this are either by using L<overload> or C<tie> magic.
+
+When the context object is overloaded, any operations on it will be performed on the original plugin object. Dereferencing, various operators overloaded in the plugin's implementations, and so forth should all work, because all operators will simply be delegated to the original plugin.
+
+The only case where there is an exception, is if the plugin's structure is an array. Since the context is implemented as an array, the array dereference operator cannot be overloaded, nor can a plugin editing @$self get it's own data. Instead $self is a reference to a tied array. Operations on the tied array will be performed on the plugin's structures indirectly.
+
+The implicit style comes in two flavors: I<implicit> and I<force-implicit>. The prior is the default. The latter will shut up warnings by L<Object::Meta::Plugin::Host> on plug time. See C<DIAGNOSTIC> for when this is desired.
+
+If needed, C<$self->plugin> and C<$self->self> still work just as they do under the C<Explicit> style.
+
+=head2 Explicit
+
+=over 4
+
+=item explicit
+
+=back
+
+Using this style, the plugin will get the actual structure of the context shim, sans magic. If tied/overloaded access is inapplicable, that's the way to go. It's also more efficient under some scenarios.
 
 In order to get access to the plugin structure the plugin must call C<$self->self> or C<$self->plugin>.
+
+The I<explicit> style gives the standard shim structure to the plugin. To gain access to it's structures a plugin will then need to call the method C<self> on the shim, as documented in L<Object::Meta::Plugin::Host>.
+
+I<explicit> is probably much more efficient when dereferencing a lot (L<overload>ing is not that fast, because it involves magic and an extra method call (C<$self->plugin> is simply called implicitly)), but is less programmer friendly. If you have a loop, like
+
+	for (my $i = 0; $i <= $bignumber; $i++){
+		$self->{thing} = $i;
+	}
+
+under the I<implicit> style, it will be slow, because $self is L<overload>ed every time. You can solve it by using
+
+	$ref = \%$self; # only if implicit is in use, and not on arrays
+
+or by using
+
+	$ref = $self->plugin; # or $self->self
+
+and operating on $ref instead of $self.
+
+The aggregate functions (C<values>, instead of C<each>, for example) will not suffer greatly from operating on C<%$self>.
+
+As described in C<Implicit>, arrays structures will benefit from I<explicit> much more, because all operations on their contents is totally indirect.
 
 C'est tout.
 
 =head1 DIAGNOSIS
 
-All errors are errors (e.g not warnings), and are thus fatal, and are produced with L<Carp>'s C<croak>. They can be trapped with C<eval> if necessary.
+=head2 Errors
+
+An error is emitted when the module doesn't know how to cope with a situation.
 
 =over 4
 
@@ -524,43 +555,71 @@ All errors are errors (e.g not warnings), and are thus fatal, and are produced w
 
 The offset requested (via the methods C<next>, C<prev> or C<offset>) is outside of the the stack of plugins for that method. That is, no plugin could be found that offset away from the current plugin.
 
-Generated at call time.
+Emitted at call time.
 
 =item Can't locate object method "%s" via any plugin in %s
 
 The method requested could not be found in any of the plugged in plugins. Instead of a classname, however, this error will report the host object's value.
 
-Generated at call time.
+Emitted at call time.
 
 =item Method "%s" is reserved for use by the context object
 
 The host C<AUTOLOAD>er was queried for a method defined in the context class. This is not a good thing, because it can cause unexpected behavior.
 
-Generated at C<plug> or call time.
+Emitted at C<plug> or call time.
 
 =item %s doesn't look like a plugin
 
 The provided object's method C<can> did not return a true value for C<init>. This is what we define as a plugin for clarity.
 
-Generated at C<plug> time.
+Emitted at C<plug> time.
 
 =item %s doesn't look like a valid export list
 
 The export list handed to the C<register> method did not define all the necessary methods, as documented in L<Object::Meta::Plugin::ExportList>.
 
-Generated at C<register> time.
+Emitted at C<register> time.
 
 =item Can't locate object method "%s" via plugin %s
 
 The method, requested for export by the export list, cannot be found via C<can> within the plugin.
 
-Generated at C<register> time.
+Emitted at C<register> time.
 
 =item %s is not plugged into %s
 
 When requesting a specific plugin to be used, and the plugin doesn't exist this happens.
 
-Generated at C<specific> time.
+Emitted at C<specific> time.
+
+=item Unknown plugin style "%s" for %s
+
+When a plugin's C<init> method returns an object, whose C<info> method returns an object, whose C<style> method returns an unknown style, this is what happens.
+
+Emitted at C<plug> time.
+
+=back
+
+=head2 Warnings
+
+A warning is emitted when the internal functionality is expected to work, but the implications on external data (plugins) might be undesired from the programmer's standpoint.
+
+=over 4
+
+=item You shouldn't use implicit access context shims if the underlying plugin's structure is already tied
+
+If a plugin whose structure is a tied array is plugged, it must be wrapped in a tied array, so that a shim can be generated for it.
+
+If the plugin is using it's structures in ways which extend beyond the array variable interface, that is anything having to do with C<tied>, things will probably break.
+
+Emitted at C<plug> time.
+
+=item Overloading a plugin's @{} operator will create unexpected behavior under the implicit style
+
+When a plugin plugged with the I<implicit> style has the C<@{}> operator overloaded, this will cause funny things. If it attempts to dereference itself as an array the array will be the structure of the shim instead of what it was hoping for.
+
+Emitted at C<plug> time.
 
 =back
 
@@ -576,11 +635,29 @@ The implementation is by no means optimized. I doubt it's fast, but I don't real
 
 The C<can> method (e.g. C<UNIVERSAL::can>) is depended on. Without it everything will break. If you try to plug something nonstandard into a host, and export something C<UNIVERSAL::can> won't say is there, implement C<can> yourself.
 
+=item *
+
+Constructing a plugin with a C<tie>d array as it's data structure, and using C<tied> somewhere in the plugin will break. This is because when the plugin is an array ref, C<tie>ing is used to give the context shim storage space, while allowing implicit access to the plugin's data structure via the shim's data structure.
+
+If you do not explicitly ask for the I<tied> style when plugging the plugin into the host, you will get a warning.
+
+=item *
+
+Using L<Scalar::Util>'s C<reftype> on the context object will always return I<ARRAY>, even if the plugin is not an array, and pretends the shim is not an array.
+
 =back
 
 =head1 BUGS
 
-Just you wait. See C<TODO> for what I have in stock!
+=over 4
+
+=item *
+
+The C<can> method for the host implementation cannot return the code reference to the real subroutine which will eventually be called. This breaks hosts-as-plugins, because the plugged in host will have it's AUTOLOAD skipped.
+
+Using C<goto> on the reference C<can> returns will work, however.
+
+=back
 
 =head1 TODO
 
@@ -588,15 +665,7 @@ Just you wait. See C<TODO> for what I have in stock!
 
 =item *
 
-Decide if C<unregister> should or shouldn't call C<unplug> if nothing of the plugin remains by the 0.02 release. Currently leaning towards "no".
-
-=item *
-
 Offset contexting AUTOLOADER needs to diet.
-
-=item *
-
-Since 5.8 is a prerequisite, use L<Scalar::Util> to cleanup references which shouldn't be strong.
 
 =back
 

@@ -1,12 +1,12 @@
 #!/usr/bin/perl
-# $Id: greedy.t,v 1.4 2003/12/03 02:34:48 nothingmuch Exp $
+# $Id: greedy.t,v 1.5 2003/12/10 02:39:33 nothingmuch Exp $
 
 use strict;
 use warnings;
 
 BEGIN { eval { require Devel::Symdump } or do { print "1..0 # Skipped: no Devel::Symdump to be found"; exit } }	
 
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 
 $| = 1; # nicer to pipes
 $\ = "\n"; # less to type?
@@ -17,6 +17,11 @@ my @test = (
 		my @foo = sort qw/bar foo laa_didaa/; return undef if grep { @foo or return undef; not $_ eq shift @foo } sort $p->exports; return undef if @foo;
 		return 1;
 	},
+	sub {
+		my $p = Bar->new();
+		my @foo = sort qw/_ding _filter _shuki/; return undef if grep { @foo or return undef; not $_ eq shift @foo } sort $p->exports; return undef if @foo;
+		return 1;
+	}
 );
 
 print "1..", scalar @test; # the number of tests we have
@@ -36,13 +41,27 @@ use warnings;
 
 use base 'Object::Meta::Plugin::Useful::Greedy';
 
+sub new {
+	bless {}, shift;
+}
+
 # define some subs
 sub laa_didaa {}
 sub foo {}
 sub bar {}
 # the rest should not be included
 sub _ding {}
+sub _shuki {}
 sub carp {}
+
+package Bar;
+
+use base 'Foo';
+
+sub _filter {
+	shift; my %seen;
+	grep { not $seen{$_}++ } grep { /^_/ } @_;
+}
 
 1; # Keep your mother happy.
 
@@ -69,6 +88,10 @@ This test suite is apart from the rest because it tests with a module which prob
 =item 1
 
 This test ensures that the export list for a greedy plugin is correct, based on a small class.
+
+=item 2
+
+This test ensures that overriding the C<_filter> method works.
 
 =back
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Plugin.pm,v 1.15 2003/12/07 10:30:11 nothingmuch Exp $
+# $Id: Plugin.pm,v 1.17 2003/12/10 03:52:30 nothingmuch Exp $
 
 package Object::Meta::Plugin; # base class for a plugin
 
@@ -8,7 +8,7 @@ use warnings;
 
 use autouse Carp => qw(croak);
 
-our $VERSION = "0.02_03";
+our $VERSION = "0.02_04";
 
 sub init { # defined.
 	my $self = shift;
@@ -106,6 +106,20 @@ Write a short tutorial on plugin writing.
 =item *
 
 Extend test suite at the specific level. More accurate testing must be made.
+
+=back
+
+=head1 HISTORY
+
+=head1 ACKNOWLEDGMENTS
+
+=over 4
+
+=item Max Maischein & 
+
+=item Mike Castle
+
+For having some tool read the docs and correct a typo.
 
 =back
 

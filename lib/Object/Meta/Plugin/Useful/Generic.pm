@@ -1,21 +1,27 @@
 #!/usr/bin/perl
-# $Id: Generic.pm,v 1.3 2003/12/07 09:28:22 nothingmuch Exp $
+# $Id: Generic.pm,v 1.6 2003/12/10 03:52:30 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful::Generic; # an extended base class with some logical features $$$ ## rename to Usefull::Generic;
 
 use strict;
 use warnings;
-use warnings::register;
 
 use base 'Object::Meta::Plugin::Useful';
 
 our $VERSION = 0.01;
 
+sub new {
+	my $pkg = shift;
+	
+	bless {
+		exports => [],
+	}, $pkg;
+}
+
 sub export { # utility method: export a list of method names
 	my $self = shift;
 	my @try_export = @_;
 	
-#	$self->{exports} ||= []; # create it if it's not there # not needed, and silly. Autovivification doesn't generate a warning.
 	my %tested = map { $_, undef } @{ $self->{exports} };
 	
 	push @{ $self->{exports} }, grep {
@@ -44,7 +50,7 @@ Object::Meta::Plugin::Useful::Generic - A generic useful plugin base class.
 =head1 SYNOPSIS
 
 	package MyFoo;
-	use bas "Object::Meta::Plugin::Useful::Generic";
+	use base "Object::Meta::Plugin::Useful::Generic";
 
 	sub new {
 		my $pkg = shift;
@@ -87,12 +93,15 @@ This method takes a list of method names, and makes sure they are all implemente
 Will emit warnings if lexical warnings are asked for. It will bark when C<$self->can($method)> is not happy. You can suppress it with
 
 	no warnings 'MyFoo';
-
-Or
-
-	no warnings 'Object::Meta::Plugin::Useful::Generic';
-
+	
 Or whatever.
+
+This also means that you will need to
+
+	use warnings::register;
+
+
+The errors are not fatal like they are in L<Object::Meta::Plugin::Host>, because this plugin implementation does not need to be necessarily plugged into the L<Object::Meta::Plugin::Host> implementation.
 
 =back
 
@@ -103,6 +112,14 @@ Nothing I know of.
 =head1 TODO
 
 Nothing right now.
+
+=head1 ACKNOWLEDGMENTS
+
+=over 4
+
+=item Mike Castle, for spotting a typo.
+
+=back
 
 =head1 COPYRIGHT & LICENSE
 

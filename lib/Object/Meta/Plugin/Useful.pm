@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Useful.pm,v 1.6 2003/12/07 09:28:22 nothingmuch Exp $
+# $Id: Useful.pm,v 1.7 2003/12/10 02:35:56 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful; # a base class for useful plugins, defines reasonable default methods
 
@@ -12,19 +12,9 @@ use Object::Meta::Plugin::ExportList;
 
 our $VERSION = 0.01;
 
-sub new {
-	my $pkg = shift;
-	
-	bless {
-		exported => undef, # the export list thought to be currently relevant
-	}, $pkg;
-}
-
 sub init {
 	my $self = shift;
-	my $style;
-
-	$self->{exported} = Object::Meta::Plugin::ExportList->new($self, @_); # create a new export list, with the methods as stated in the call to plug, and save it for future reference
+	Object::Meta::Plugin::ExportList->new($self, @_); # create a new export list, with the methods as stated in the call to plug, and save it for future reference
 }
 
 1; # Keep your mother happy.
@@ -57,13 +47,13 @@ This is a base class for a [meta] plugin which extends Object::Meta::Plugin::Use
 
 This is a base class for a plugin which extends Object::Meta::Plugin::Useful. It gobbles the defined methods of an object from it's symbol table / @ISA tree, and then filters them using the [overridable] method C<_filter>. It should provide the easiest functionality, provided that there is no wizardry going on. The other downside is that it requires L<Devel::Symdump> to work.
 
+=head1 SUBCLASSING
+
+This implementation uses the export list implementation found in L<Object::Meta::Plugin::ExportList>. That implementation requires that the plugin define a method called C<exports>, which returns a list of method names. Look at the classes which subclass this, for some examples.
+
 =head1 METHODS
 
 =over 4
-
-=item new
-
-This method will create a new object, with a hash data structure. The key 'exported' is used, and it's value will be an L<Object::Meta::Plugin::ExportList> object, created when C<init> is called.
 
 =item init
 
@@ -77,13 +67,7 @@ Nothing I can think of.
 
 =head1 BUGS
 
-=over 4
-
-=item *
-
-Namespace is not well defined within the hash, nor is it guaranteed that it will never be extended.
-
-=back
+Nada.
 
 =head1 TODO
 

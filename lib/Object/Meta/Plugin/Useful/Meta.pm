@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Meta.pm,v 1.7 2003/12/07 10:02:01 nothingmuch Exp $
+# $Id: Meta.pm,v 1.8 2003/12/10 02:39:55 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful::Meta; # a plugin base class which subclasses Object::Meta::Plugin::Host - a meta plugin
 
@@ -9,16 +9,6 @@ use warnings;
 use base qw/Object::Meta::Plugin::Host Object::Meta::Plugin::Useful/;
 
 our $VERSION = 0.01;
-
-sub new {
-	my $pkg = shift;
-	
-	my $self = $pkg->SUPER::new(); # host, not useful plugin;
-	
-	$self->{exported} = undef;
-	
-	$self;
-}
 
 sub exports {
 	keys %{ $_[0]->methods };
@@ -53,10 +43,6 @@ This is an L<Object::Meta::Plugin::Host> and more. It provides the necessary met
 
 =over 4
 
-=item new
-
-Overrides the default L<Object::Meta::Plugin::Host> constructor, and adds more data to the internal structures.
-
 =item exports
 
 Returns the methods of the host it subclasses.
@@ -69,7 +55,7 @@ Returns the methods of the host it subclasses.
 
 =item *
 
-Somewhat defies the purpose of plugging things in. It is possible (and even tested for) to plug a plugin into a host, and have that plugin provide plugin capabilities. Such an implementation would look like this:
+Somewhat defies the purpose of plugging things in. It is possible (and even tested for, look at L<t/lib/OMPTest.pm>) to plug a plugin into a host, and have that plugin provide plugin capabilities. Such an implementation would look like this:
 
 
 	package SuperPlugin;
@@ -109,7 +95,7 @@ Somewhat defies the purpose of plugging things in. It is possible (and even test
 
 =head1 BUGS
 
-Doesn't use L<Object::Meta::Plugin::Useful>'s C<new>, but rather emulates it. Perhaps L<Object::Meta::Plugin::Useful> should be extended to allow the addition of necessary fields to an already made object. The next problem is how to call it.
+Nada.
 
 =head1 TODO
 
