@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: ExportList.pm,v 1.3 2003/12/03 02:34:47 nothingmuch Exp $
+# $Id: ExportList.pm,v 1.4 2003/12/07 09:28:22 nothingmuch Exp $
 
 package Object::Meta::Plugin::ExportList; # an object representing the skin of a plugin - what can be plugged and unseamed at the top level.
 
@@ -114,7 +114,7 @@ __END__
 
 =head1 NAME
 
-Object::Meta::Plugin::ExportList - an implementation of a very simple, string only export list.
+Object::Meta::Plugin::ExportList - An implementation of a very simple, string only export list, for use with Useful:: plugins.
 
 =head1 SYNOPSIS
 
@@ -221,6 +221,10 @@ Relies on the plugin implementation to provide a non-mandatory extension - the C
 
 Not that I know of, for the while being at least.
 
+=head1 TODO
+
+Nothing right now.
+
 =head1 COPYRIGHT & LICENSE
 
 	Copyright 2003 Yuval Kogman. All rights reserved.
@@ -233,6 +237,6 @@ Yuval Kogman <nothingmuch@woobling.org>
 
 =head1 SEE ALSO
 
-L<Object::Meta::Plugin>, L<Object::Meta::Plugin::Useful>, L<Object::Meta::Plugin::Host>
+L<Object::Meta::Plugin>, L<Object::Meta::Plugin::Useful>, L<Object::Meta::Plugin::Host>.
 
 =cut

@@ -16,25 +16,25 @@ Hash: SHA1
 
 SHA1 811450587e16441c06e796984a9ec160690bb1a1 Build.PL
 SHA1 d308b392876a79e39f73ebfea24324e6dda9f4d3 MANIFEST
-SHA1 8a4fe333f8cc603ea18b492240859ef1348d5269 META.yml
-SHA1 9f986febad38222ee345656f2254202df06404a8 Makefile.PL
+SHA1 fc82b19af0880891d3a690d52529a234e5eb6d48 META.yml
+SHA1 28d1b35cc715738c017e2c55d450c5630bc664b8 Makefile.PL
 SHA1 147c23f096e8ffe881d7bf101e134d9ff8b9bc63 README
-SHA1 8f88ec178d21e139cf5fbd4598863ba26dc2f011 lib/Object/Meta/Plugin.pm
-SHA1 5cc9e6ea97e48a3682a3f96dcb1ba9eda00d6515 lib/Object/Meta/Plugin/ExportList.pm
-SHA1 a07b5747af23cc11b395a64c4bd4cd3af0637117 lib/Object/Meta/Plugin/Host.pm
-SHA1 133023769af0ce6f3caf0675f052b79f87a45411 lib/Object/Meta/Plugin/Useful.pm
-SHA1 10912ea4dad7e03b6a895ae950b442538852e7c5 lib/Object/Meta/Plugin/Useful/Generic.pm
-SHA1 4c08216b532a829bb1f1e9c0938ee993e97d565b lib/Object/Meta/Plugin/Useful/Greedy.pm
-SHA1 6feeb726e9198f47f3712d190c6e29fec8a024a6 lib/Object/Meta/Plugin/Useful/Meta.pm
-SHA1 9519cb0fa26c8f22f946da696e7743a087af815e t/basic.t
+SHA1 13fe960e881e6208b23a2d4b224a576c842500eb lib/Object/Meta/Plugin.pm
+SHA1 c039d6dac2e0315c968aac5e7640378d3cf7ba4e lib/Object/Meta/Plugin/ExportList.pm
+SHA1 f8f7510b94e728c5883fc49d87d998503b6d543b lib/Object/Meta/Plugin/Host.pm
+SHA1 5530b952e0325a5f9df77c6f3b604612abc0d191 lib/Object/Meta/Plugin/Useful.pm
+SHA1 4b124a7daba48b5b48e93979634c7fffd0f7917c lib/Object/Meta/Plugin/Useful/Generic.pm
+SHA1 a0ff88d2bbbf1d2e9cdd6b9cb3836d630b873499 lib/Object/Meta/Plugin/Useful/Greedy.pm
+SHA1 3c7c967d10b4d78e7ad615aafb74248c7d3ffb21 lib/Object/Meta/Plugin/Useful/Meta.pm
+SHA1 082bf1609a44126bc14061ffa7507e3b3518cdab t/basic.t
 SHA1 b012f1ca72931588c3b06b38d1dab1cf437ae7d9 t/error_handling.t
-SHA1 fa86693539653de36db829c13996c8bf48bc5140 t/extremes.t
+SHA1 eed279c1d722b29c7a91b11689805e9421800f9d t/extremes.t
 SHA1 0fc2b6e64e2cb115c3fd1bc820db59485db9123f t/greedy.t
-SHA1 1230b12a1e20a9b49c16e6edb1f2fcf830db7827 t/lib/OMPTest.pm
+SHA1 8022e41fc71aa36623ecbcccc7e516fb1fb07ad9 t/lib/OMPTest.pm
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.2.3 (Darwin)
 
-iD8DBQE/z5k2VCwRwOvSdBgRAj3zAKC4gHSKkSCAJtDN+eDwgn5G4cZFsQCgvQ+E
-nK0RWBEnooOMpEd6s9/S/xs=
-=26kL
+iD8DBQE/0wGCVCwRwOvSdBgRAha8AJ4jtBKSHYJ4SyVb7eeWhVoWE2vE3QCfQzt4
+4h0BASRWPo1+e8SWHOMN2xM=
+=SMre
 -----END PGP SIGNATURE-----

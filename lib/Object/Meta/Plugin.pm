@@ -1,8 +1,5 @@
 #!/usr/bin/perl
-# $Id: Plugin.pm,v 1.12 2003/12/03 02:34:47 nothingmuch Exp $
-
-# to do:
-# circular reference crap. make sure all references which should be weak are weakened.
+# $Id: Plugin.pm,v 1.15 2003/12/07 10:30:11 nothingmuch Exp $
 
 package Object::Meta::Plugin; # base class for a plugin
 
@@ -11,7 +8,7 @@ use warnings;
 
 use autouse Carp => qw(croak);
 
-our $VERSION = "0.02_02";
+our $VERSION = "0.02_03";
 
 sub init { # defined.
 	my $self = shift;
@@ -26,7 +23,7 @@ __END__
 
 =head1 NAME
 
-Object::Meta::Plugin - a classless compound object implementation or a base class for an element of thereof.
+Object::Meta::Plugin - A classless compound object implementation or a base class for an element of thereof.
 
 =head1 SYNOPSIS
 
@@ -54,23 +51,25 @@ The basic concept is that you have an object. The object is quite empty and dull
 
 	$host->unplug($plugin);
 
-When an object is plugged into the host it's C<init> method is called, with the arguments that were passed to C<plug> just after the plugin object itself. What init needs to do is tell the host what to import into it. It does this by means of an export list object. The definition of such an object can be found in L<Object::Meta::Plugin::ExportList>.
+When an object is plugged into the host it's C<init> method is called, with the arguments that were passed to C<plug> just after the plugin object itself. What init needs to do is tell the host what to import into it. It does this by means of an export list object. The definition of such an object, as well as a simple reference implementation, can be found in L<Object::Meta::Plugin::ExportList>.
 
 In fact, C<plug> does nothing of it's own right. It simply passes the return value from C<init> to C<register>. You could use some sort of handle object to plug into the host - the actual reference which will be accounted for, is that which is returned by the export list object's method C<plugin>.
 
-The host object will use the C<register> method to register the plugin's methods in it's indices. Plugins will thus stack atop one another, similar to the way classes subclass other classes.
+The host object will use the C<register> method to register the plugin's methods in it's indices. Plugins will thus stack atop one another, similar to the way classes subclass other classes. But it doesn't need to be that way, since the method stacks can be reordered arbitrarily - they're just arrays of references.
 
-Subsequently, a method not defined by the host's class (or ancestors, but not in my implementation) will be called. The host's AUTOLOAD subroutine will then take action. If the method which was not found is exported by any of the plugged plugins a C<croak> will be uttered. Otherwise, the host will create what is known as a context object. The context provides a more comfortable environment for the plugin, while maintaining a relationship to the host, external of the plugin itself. It also enables some additional whiz bang, like having the methods C<next> and C<prev> work even if multiple copies of the same plugin are attached at various points in the host.
+Subsequently, a method not defined by the host's class (or ancestors, but not in my implementation) will be called. The host's AUTOLOAD subroutine will then take action. If the method which was not found is exported by any of the plugged plugins a C<croak> will be uttered. Otherwise, the host will create what is known as a context object (a sort of shim). The context provides a more comfortable environment for the plugin, while maintaining a relationship to the host, without changing anything in the plugin's data structures (no reblessing, etc). It also enables some additional whiz bang, like having the methods C<next> and C<prev> work even if multiple copies of the same plugin are attached at various points in the host.
 
-It should be noted that the host implementation was designed so that it could be plugged into another host, provided a plugin of some sort will provide the basic definition of a plugin.
+It should be noted that the host implementation was designed so that it could be plugged into another host, provided a plugin of some sort will provide the basic definition of a plugin. This "meta plugin" thing is illustrated in L<Object::Meta::Plugin::Useful::Meta>, and tested for in the test suite.
 
-=head1 METHODS
+=head1 METHODS (OF THE CLASS NAMED HEREIN)
 
 =over 4
 
 =item init
 
-This is the one sole method needed to consider an object to be a plugin. Of course, it must also return a proper value. In this implementation it simply croaks. You need to use an L<Object::Meta::Plugin::Useful> variant if you don't want to write it all yourself.
+This is the one sole method needed to consider an object to be a plugin. Of course, it must also return a proper valuem, which looks like an L<Object::Meta::Plugin::ExportList>. In this implementation it simply croaks. You need to use an L<Object::Meta::Plugin::Useful> variant if you don't want to write it all yourself.
+
+The expected behavior is documented in L<Object::Meta::Plugin::Host>, which is the ultimate authority on what needs to happen.
 
 =back
 
@@ -80,11 +79,33 @@ This is the one sole method needed to consider an object to be a plugin. Of cour
 
 =item *
 
-The way to access your plugin's data structures, and thus gain data store, is $self->self. That's a silly way. I need to find some easier method of accessing the guts of the plugin. Perhaps with tied hashes, but that sounds very dirty.
+There's a huge dependency on every plugin's C<can> method. If C<UNIVERSAL::can> won't work for it, just implement it.
+
+=back
+
+=head1 BUGS
+
+Conceptually I think there's no room for bugs here, because what it defines it defines as "the right way". Look at the implementation.
+
+=head1 TODO
+
+=over 4
 
 =item *
 
-There's a huge dependency on every plugin's C<can> method. If C<UNIVERSAL::can> won't work for it, just implement it.
+Create general multimethod/dispatcher plugin base classes.
+
+=item *
+
+Audit docs.
+
+=item *
+
+Write a short tutorial on plugin writing.
+
+=item *
+
+Extend test suite at the specific level. More accurate testing must be made.
 
 =back
 

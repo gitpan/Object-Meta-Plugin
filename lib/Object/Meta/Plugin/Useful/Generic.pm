@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Generic.pm,v 1.2 2003/12/03 01:31:41 nothingmuch Exp $
+# $Id: Generic.pm,v 1.3 2003/12/07 09:28:22 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful::Generic; # an extended base class with some logical features $$$ ## rename to Usefull::Generic;
 
@@ -15,6 +15,7 @@ sub export { # utility method: export a list of method names
 	my $self = shift;
 	my @try_export = @_;
 	
+#	$self->{exports} ||= []; # create it if it's not there # not needed, and silly. Autovivification doesn't generate a warning.
 	my %tested = map { $_, undef } @{ $self->{exports} };
 	
 	push @{ $self->{exports} }, grep {
@@ -38,7 +39,7 @@ __END__
 
 =head1 NAME
 
-Object::Meta::Plugin::Useful::Generic - a generic useful plugin base class.
+Object::Meta::Plugin::Useful::Generic - A generic useful plugin base class.
 
 =head1 SYNOPSIS
 
@@ -91,19 +92,17 @@ Or
 
 	no warnings 'Object::Meta::Plugin::Useful::Generic';
 
-Depending on what level you'd like the warnings to be suppressed.
+Or whatever.
 
 =back
 
 =head1 BUGS
 
-=over 4
+Nothing I know of.
 
-=item *
+=head1 TODO
 
-Namespace is not well defined within the hash, nor is it guaranteed that it will never be extended.
-
-=back
+Nothing right now.
 
 =head1 COPYRIGHT & LICENSE
 

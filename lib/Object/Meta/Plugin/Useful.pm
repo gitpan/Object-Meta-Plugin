@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Useful.pm,v 1.4 2003/12/03 02:20:14 nothingmuch Exp $
+# $Id: Useful.pm,v 1.6 2003/12/07 09:28:22 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful; # a base class for useful plugins, defines reasonable default methods
 
@@ -17,7 +17,6 @@ sub new {
 	
 	bless {
 		exported => undef, # the export list thought to be currently relevant
-		exports => [], # the exports list
 	}, $pkg;
 }
 
@@ -36,7 +35,7 @@ __END__
 
 =head1 NAME
 
-Object::Meta::Plugin::Useful - a subclass of L<Object::Meta::Plugin>, base class of the various Useful:: plugins.
+Object::Meta::Plugin::Useful - A subclass of Object::Meta::Plugin, base class of the various Useful:: plugins.
 
 =head1 SYNOPSIS
 
@@ -71,6 +70,24 @@ This method will create a new object, with a hash data structure. The key 'expor
 This method will will create a new export list. All arguments to it (probably accepted from L<Object::Meta::Plugin::Host>'s C<plug> method, are passed to L<Object::Meta::Plugin::ExportList>'s C<new>.
 
 =back
+
+=head1 CAVEATS
+
+Nothing I can think of.
+
+=head1 BUGS
+
+=over 4
+
+=item *
+
+Namespace is not well defined within the hash, nor is it guaranteed that it will never be extended.
+
+=back
+
+=head1 TODO
+
+Nothing right now.
 
 =head1 COPYRIGHT & LICENSE
 

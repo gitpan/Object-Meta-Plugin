@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Greedy.pm,v 1.6 2003/12/03 23:12:51 nothingmuch Exp $
+# $Id: Greedy.pm,v 1.7 2003/12/07 09:28:22 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful::Greedy;
 
@@ -45,7 +45,7 @@ __END__
 
 =head1 NAME
 
-Object::Meta::Plugin::Useful::Greedy - a useful plugin base class which gobbles up reasonable parts of the symbol table at export time.
+Object::Meta::Plugin::Useful::Greedy - A useful plugin base class which gobbles up reasonable parts of the symbol table at export time.
 
 =head1 SYNOPSIS
 
@@ -95,7 +95,7 @@ You really should define it in your class, if you want more control of the patte
 
 =item *
 
-Does not work on classless objects and such. The plugin in question must be a real set of classes.
+Does not work on classless objects and such. The plugin in question must be a real set of classes, with real symbol tables, and @ISAs and what nots. How dull.
 
 =item *
 

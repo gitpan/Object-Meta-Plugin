@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Meta.pm,v 1.5 2003/12/03 14:40:48 nothingmuch Exp $
+# $Id: Meta.pm,v 1.7 2003/12/07 10:02:01 nothingmuch Exp $
 
 package Object::Meta::Plugin::Useful::Meta; # a plugin base class which subclasses Object::Meta::Plugin::Host - a meta plugin
 
@@ -13,10 +13,9 @@ our $VERSION = 0.01;
 sub new {
 	my $pkg = shift;
 	
-	my $self = $pkg->SUPER::new(); # host;
+	my $self = $pkg->SUPER::new(); # host, not useful plugin;
 	
 	$self->{exported} = undef;
-	$self->{exports} = [];
 	
 	$self;
 }
@@ -34,7 +33,7 @@ __END__
 
 =head1 NAME
 
-Object::Meta::Plugin::Useful::Meta - a subclass of Object::Meta::Plugin::Useful and Object::Meta::Plugin::Host, base class for hosts which are plugins.
+Object::Meta::Plugin::Useful::Meta - A subclass of Object::Meta::Plugin::Useful and Object::Meta::Plugin::Host, base class for hosts which are plugins.
 
 =head1 SYNOPSIS
 
@@ -107,6 +106,16 @@ Somewhat defies the purpose of plugging things in. It is possible (and even test
 	}
 
 =back
+
+=head1 BUGS
+
+Doesn't use L<Object::Meta::Plugin::Useful>'s C<new>, but rather emulates it. Perhaps L<Object::Meta::Plugin::Useful> should be extended to allow the addition of necessary fields to an already made object. The next problem is how to call it.
+
+=head1 TODO
+
+Nothing right now.
+
+=head1
 
 =head1 COPYRIGHT & LICENSE
 

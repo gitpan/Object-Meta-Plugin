@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: extremes.t,v 1.6 2003/12/03 13:13:40 nothingmuch Exp $
+# $Id: extremes.t,v 1.7 2003/12/07 09:28:22 nothingmuch Exp $
 
 ### these sets of tests are not a model for a efficiency (code or programmer), but rather for clarity.
 ### when editing, please keep in mind that it must be absolutely clear what's going on, to ease debugging when we've forgotten what's going on.
@@ -160,11 +160,11 @@ __END__
 
 =head1 NAME
 
-t/extremes.t - Weird ideas that should theoretically be possible. Breaking these will mean that we're doing something we probably don't want to be doing.
+t/extremes.t - Tests weird ideas that should theoretically be possible. Breaking these will mean that we're doing something we probably don't want to be doing.
 
 =head1 DESCRIPTION
 
-The aim of this test file is to build a set of tests that should work in theory, and do work in practice, now that the implementation is simple an unoptimized.
+The aim of this test file is to build a set of tests that should work in theory, and do work in practice, now that the implementation is simple andunoptimized.
 
 As the L<Object::Meta::Plugin> implementation matures, and becomes more magical, I expect things to break without noticing.
 

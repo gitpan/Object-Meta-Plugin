@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: basic.t,v 1.10 2003/12/03 02:34:47 nothingmuch Exp $
+# $Id: basic.t,v 1.11 2003/12/07 10:30:44 nothingmuch Exp $
 
 ### these sets of tests are not a model for a efficiency (code or programmer), but rather for clarity.
 ### when editing, please keep in mind that it must be absolutely clear what's going on, to ease debugging when we've forgotten what's going on.
@@ -117,7 +117,42 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
-	sub { # 7 unplugging
+	sub { # 7 offsets
+		my $o = OMPTest::Object::Thingy->new();
+		my $host = Object::Meta::Plugin::Host->new();
+		$host->plug($_->new()) for (qw/
+			OMPTest::Plugin::Nice::One
+			OMPTest::Plugin::Upset::Picky::AnotherGorch
+			OMPTest::Plugin::Upset::Picky
+		/);
+		
+		my @steps = (
+			qr/Upset::Picky::AnotherGorch::gorch$/,
+			qr/Nice::One::gorch$/,
+			qw/Plugin::Upset::Picky::bar$/,
+		);
+		
+		### THE FOLLOWING CALL IS ON bar, NOT foo!!!
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->bar($o)}); return not @steps;
+	},
+	sub { # 8 'specific' method
+		my $o = OMPTest::Object::Thingy->new();
+		my $host = Object::Meta::Plugin::Host->new();
+		$host->plug($_->new()) for (qw/
+			OMPTest::Plugin::Nice::One
+			OMPTest::Plugin::Upset::Picky::AnotherGorch
+			OMPTest::Plugin::Upset::Picky
+		/);
+		
+		my @steps = (
+			qr/Upset::Picky::AnotherGorch::gorch$/,
+			qr/Nice::One::gorch$/,
+			qw/Plugin::Upset::Picky::foo$/,
+		);
+		
+		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
+	},
+	sub { # 9 unplugging
 		my $o = OMPTest::Object::Thingy->new();
 		my $host = Object::Meta::Plugin::Host->new();
 		
@@ -142,7 +177,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
-	sub { # 8 multiplicity
+	sub { # 10 multiplicity
 		my $o = OMPTest::Object::Thingy->new();
 		my $host = Object::Meta::Plugin::Host->new();
 		$host->plug($_->new()) for (qw/
@@ -165,7 +200,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		### THE FOLLOWING CALL IS ON bar, NOT foo!!!
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->bar($o)}); return not @steps;
 	},
-	sub { # 9 multpiplicity + unplug
+	sub { # 11 multpiplicity + unplug
 		my $o = OMPTest::Object::Thingy->new();
 		my $host = Object::Meta::Plugin::Host->new();
 		my $p =	OMPTest::Plugin::Upset::One->new();
@@ -183,7 +218,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
-	sub { # 10 hosts as plugins
+	sub { # 12 hosts as plugins
 		my $o = OMPTest::Object::Thingy->new();
 		
 		my $host = Object::Meta::Plugin::Host->new();
@@ -220,7 +255,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 		
 	},
-	sub { # 11 hosts as plugins
+	sub { # 13 hosts as plugins
 	
 		#return "Not implemented yet.";
 		my $o = OMPTest::Object::Thingy->new();
@@ -259,7 +294,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 		
 	},
-	sub { # 12 unregistering - make sure that ExportLists unmerge correctly
+	sub { # 14 unregistering - make sure that ExportLists unmerge correctly
 		my $host = Object::Meta::Plugin::Host->new();
 		my $plugin = OMPTest::Plugin::Nice::One->new();
 		$host->plug($plugin);
@@ -272,7 +307,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		
 		return 1;
 	},
-	sub { # 13 registering - make sure that ExportLists merge correctly
+	sub { # 15 registering - make sure that ExportLists merge correctly
 		my $host = Object::Meta::Plugin::Host->new();
 		my $plugin = OMPTest::Plugin::Nice::One->new();
 		$host->plug($plugin);
@@ -286,7 +321,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		
 		return 1;
 	},
-	sub { # 14 tied context shim
+	sub { # 16 tied context shim
 		my $o = OMPTest::Object::Thingy->new();
 		my $host = Object::Meta::Plugin::Host->new();
 		
@@ -302,7 +337,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
-	sub { # 15 tied context shim
+	sub { # 17 tied context shim
 		my $o = OMPTest::Object::Thingy->new();
 		my $host = Object::Meta::Plugin::Host->new();
 		
@@ -318,7 +353,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
-	sub { # 16 'standard' (explicit access via $self->self) context shim
+	sub { # 18 'standard' (explicit access via $self->self) context shim
 		my $o = OMPTest::Object::Thingy->new();
 		my $host = Object::Meta::Plugin::Host->new();
 		
@@ -334,7 +369,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
-	sub { # 17 'standard' (explicit access via $self->self) context shim
+	sub { # 19 'standard' (explicit access via $self->self) context shim
 		my $o = OMPTest::Object::Thingy->new();
 		my $host = Object::Meta::Plugin::Host->new();
 		
@@ -350,7 +385,7 @@ my @test = ( # a series of test subs, which return true for success, 0 otherwise
 		
 		(@steps && $_ =~ (shift @steps)) or return undef foreach (@{$host->foo($o)}); return not @steps;
 	},
-	sub { # 18 summary - actually retests stuff that was already done, but just in case
+	sub { # 20 summary - actually retests stuff that was already done, but just in case
 		my $o = OMPTest::Object::Thingy->new();
 		my $host = Object::Meta::Plugin::Host->new();
 		$host->plug($_->new()) for (qw/
@@ -426,53 +461,61 @@ This test ensures that the context object will shortcut method calls when approp
 
 =item 6
 
-This test ensures that the next method of the context object works, and that the offset context generator also works as expected.
+This test ensures that the C<next>, C<prev> & C<offset> methods of the context object works, and that the offset context generator also works as expected.
 
 =item 7
 
-This test ensures that unplugging works properly (functionality and cleanup).
+This test ensures that the C<offset> method of the context object works, and iterates a whole method stack to test it.
 
 =item 8
 
-This test plugs two copies of the same plugin in, and makes sure that the two copies are differentiated.
+This test ensures that the C<specific> method of the host object works, and iterates a whole method stack to test it.
 
 =item 9
 
-This test ensures that two copies of the same plugin will both be expunged when the plugin is unplugged.
+This test ensures that unplugging works properly (functionality and cleanup).
 
 =item 10
 
-This test creates plugins from hosts, and makes sure that the various context are still applicable. Moreover, it provides a means for checking that Host.pm's implementation is correct in both cases - normally, and as a plugin.
+This test plugs two copies of the same plugin in, and makes sure that the two copies are differentiated.
 
 =item 11
 
-This test also creates plugins from hosts, but it's done not with a subclass of L<Object::Meta::Plugin::Host>, but rather with a plugin that provides the necessary functionality from within, and not from without.
+This test ensures that two copies of the same plugin will both be expunged when the plugin is unplugged.
 
 =item 12
 
-This test plugs a plugin, and unregisters specific methods. Then it makes sure that the correct values changed.
+This test creates plugins from hosts, and makes sure that the various context are still applicable. Moreover, it provides a means for checking that Host.pm's implementation is correct in both cases - normally, and as a plugin.
 
 =item 13
 
-This test plugs a plugin, then unregisters some methods. It then plugs methods back, and makes sure the values are correct.
+This test also creates plugins from hosts, but it's done not with a subclass of L<Object::Meta::Plugin::Host>, but rather with a plugin that provides the necessary functionality from within, and not from without.
 
 =item 14
 
-This test ensures that the tied access to the plugin's internals via the default style shim works.
+This test plugs a plugin, and unregisters specific methods. Then it makes sure that the correct values changed.
 
 =item 15
 
-Same as C<14>
+This test plugs a plugin, then unregisters some methods. It then plugs methods back, and makes sure the values are correct.
 
 =item 16
 
-This test ensures that the explicit access to the plugin's internals via the explicit style shim works. 
+This test ensures that the tied access to the plugin's internals via the default style shim works.
 
 =item 17
 
-Same as 17.
+Same as C<16>
 
 =item 18
+
+This test ensures that the explicit access to the plugin's internals via the explicit style shim works. 
+
+=item 19
+
+Same as 18.
+
+=item 20
 
 This test is some of the aspects of the previous tests combined. It makes use of all of the plugins, at one point or another. It tests offsets, super, but not host-as-plugin.
 

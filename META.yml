@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name: Object-Meta-Plugin
-version: 0.02_02
+version: 0.02_03
 license: perl
 distribution_type: module
 requires:
@@ -17,7 +17,7 @@ conflicts: {}
 provides:
   Object::Meta::Plugin:
     file: lib/Object/Meta/Plugin.pm
-    version: 0.02_02
+    version: 0.02_03
   Object::Meta::Plugin::ExportList:
     file: lib/Object/Meta/Plugin/ExportList.pm
     version: 0.02

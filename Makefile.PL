@@ -4,13 +4,13 @@ use ExtUtils::MakeMaker;
 WriteMakefile
   (
    NAME        => 'Object::Meta::Plugin',
-   VERSION     => '0.02_02',
+   VERSION     => '0.02_03',
    PL_FILES    => {},
    INSTALLDIRS => 'site',
    PREREQ_PM   => {
 		 'Tie::RefHash' => '>= 1.3',
 		 'autouse' => '>= 1.03',
-		 'Scalar::Util' => '0',
 		 'Carp' => '>= 1.01',
+		 'Scalar::Util' => '0',
 		  },
   );

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: Host.pm,v 1.15 2003/12/03 02:34:47 nothingmuch Exp $
+# $Id: Host.pm,v 1.18 2003/12/07 10:23:30 nothingmuch Exp $
 
 package Object::Meta::Plugin::Host;
 
@@ -66,14 +66,11 @@ sub unplug { #
 		
 		delete $self->plugins->{$plugin};
 	}
-	# munge the stack
 }
 
 sub register { # export list
 	my $self = shift;
 	my $x = shift;
-	
-	# create the stack
 	
 	croak "$x doesn't look like a valid export list" if (!$x or grep { not $x->can($_) } qw/list plugin exists merge unmerge info/);
 	
@@ -107,7 +104,7 @@ sub unregister {
 				delete $self->methods->{$method} unless (@{ $self->stack($method) });
 			}
 		} else {
-			$self->unplug($x->plugin());
+			$self->unplug($x->plugin()); # $$$ should this happen? If a plugin loses all it's registry, is it no longer plugged in? fuss over this one to great lengths.
 		}
 	}
 }
@@ -117,6 +114,15 @@ sub stack { # : lvalue { # grant access to the stack of a certain method.
 	my $method = shift;
 	
 	@_ ? ($self->methods->{$method} = shift) : $self->methods->{$method};
+}
+
+sub specific {
+	my $self = shift;
+	my $plugin = shift;
+	
+	croak "$plugin is not plugged into $self" unless exists $self->plugins->{$plugin};
+	
+	Object::Meta::Plugin::Host::Context->new($self, $plugin);
 }
 
 sub can { # provide a subref you can goto
@@ -224,18 +230,18 @@ sub self { goto &plugin }
 
 sub offset { # get a context with a numerical offset
 	my $self = shift;
-	my $offset = shift;
+	my $offset = -1 * shift;
 	Object::Meta::Plugin::Host::Context::Offset->new($self->host,$self->plugin,$offset,$self->instance);
 }
 
 sub prev { # an overlying method - call a context one above
 	my $self = shift;
-	$self->offset(1);
+	$self->offset(-1);
 }
 
 sub next { # an underlying method - call a context one below
 	my $self = shift;
-	$self->offset(-1);
+	$self->offset(1);
 }
 
 sub can { # try to return the correct method.
@@ -324,7 +330,9 @@ sub new {
 	$self;
 }
 
-sub can { $AUTOLOAD = ref $_[0] . "::can"; goto &AUTOLOAD; }; # $$$ not yet tested. I'm pretty sure AUTOLOAD will [not][ be hit after UNIVERSAL::can is found. It doesn't rally matter.
+# $$$ should there be a next and prev method? is $self->next->next() a valid thing to do? It's kind of silly, because $self->offset(-2) acheives the same effect.
+
+sub can { $AUTOLOAD = ref $_[0] . "::can"; goto &AUTOLOAD; }; # $$$ not yet tested. I'm pretty sure AUTOLOAD will not be hit before UNIVERSAL::can is found. It doesn't rally matter if that's not the case.
 sub AUTOLOAD { # it has to be less ugly than this
 	my $self = shift;
 	$AUTOLOAD =~ /.*::(.*?)$/;
@@ -362,7 +370,7 @@ __END__
 
 =head1 NAME
 
-Object::Meta::Plugin::Host - hosts plugins that work like L<Object::Meta::Plugin>. Can serve as a plugin if subclassed, or contains a plugin which can help it to plug.
+Object::Meta::Plugin::Host - Hosts plugins that work like Object::Meta::Plugin (Or rather Object::Meta::Plugin::Useful, because the prior doesn't work per se). Can be a plugin if subclassed, or contains a plugin which can help it to plug.
 
 =head1 SYNOPSIS
 
@@ -386,19 +394,33 @@ Object::Meta::Plugin::Host - hosts plugins that work like L<Object::Meta::Plugin
 
 =head1 DESCRIPTION
 
-Object::Meta::Plugin::Host is an implementation of a plugin host, as described in L<Object::Meta::Plugin>.
+Object::Meta::Plugin::Host is an implementation of a plugin host, as illustrated in L<Object::Meta::Plugin>.
 
-The host is not just simply a merged hash. It is designed to allow various plugins to provide similar capabilities - methods with conflicting namespace. Conflicting namespaces can coexist, and take precedence over one another. A possible scenario is to have various plugins for an image processor, which all define the method "process". They are all installed, ordered as the effect should be taken out, and finally atop them all a plugin which wraps them into a pipeline is set.
+The host is not just simply a merged namespace. It is designed to allow various plugins to provide similar capabilities - methods with conflicting namespace. Conflicting namespaces can coexist, and take precedence over, as well as access one another. An examplifying scenario could be an image processor, whose various filter plugins all define the method "process". The plugins are all installed, ordered as the effect should be taken out, and finally atop them all a plugin which wraps them into a pipeline is set. It's process method will look like
 
-When a plugin's method is entered it receives, instead of the host object, a context object, particular to itself. It allows it access to it's host, it's sibling plugins, and so forth explicitly, while implicitly wrapping around the host, and emulating it with reordered priority - the current plugin is first in the list.
+	sub process {
+		my $self = shift;
+		my $image = shift;
+		
+		foreach my $plugin (reverse @{ $self->super->stack('process') }){
+			next if $plugin == $self->self;
+			$image = $self->super->specific($plugin)->process($image);
+		}
+		
+		# for (my $i = 1; $i <= $#{ $self->super->stack('process') }){
+		#     $image = $self->offset($i)->process($image);
+		# }
+		
+		return $image;
+	}
 
-Such a model enables a dumb plugin to work quite happily with others, even those which may take it's role. The only rule it needs to keep is that it accesses it's data structures using C<$self->self>, and not C<$self>, because $self is the context object.
+When a plugin's method is entered it receives, instead of the host object, a context object, particular to itself. The context object allows it access to the host host, the plugin's siblings, and so forth explicitly, while implicitly providing one or two modifications. The first is that all calls against $_[0], which is the context, have an altered method priority - calls will be mapped to the current plugin's method before the host defaults methods. The second, default but optional implicit feature is that all modifications on the reference received in $_[0] are mapped via a tie interface to the original plugin's data structures.
 
-A more complex plugin, aware that it may not be peerless, could explicitly ask for the default (host defined) methods it calls, instead of it's own. It can request to call a method on the plugin which succeeds it or precedes it in a certain method's stack. Additionally, by gaining access to the host object a plugin could implement a pipeline of calls quite easily, as described above. All it must do is call C<$self->host->stack($method)> and iterate that omitting itself.
+Such a model enables a dumb plugin to work quite happily with others, even those which may take it's role.
 
-The interface aims to be simple enough to be flexible, trying for the minimum it needs to define to be useful, and creating workarounds for the limitations this minimum imposes.
+A more complex plugin, aware that it may not be peerless, could explicitly ask for the default (host defined) methods it calls, instead of it's own. It can request to call a method on the plugin which succeeds it or precedes it in a certain method's stack.
 
-The implementation is by no means optimized. I doubt it's fast, but I don't really care. It's supposed to create a nice framework for a large application, which needs to be modular.
+The interface aims to be simple enough to be flexible, trying for the minimum it needs to define in order to be useful, and creating workarounds for the limitations this minimum imposes.
 
 =head1 METHODS
 
@@ -408,11 +430,11 @@ The implementation is by no means optimized. I doubt it's fast, but I don't real
 
 =item methods
 
-Returns a hash ref, to a hash of methods => array refs. The array refs are the stacks, and they can be accessed individually via the C<stack> method.
+Returns a hash ref, to a hash of method names => array refs. The array refs are the stacks, and they can be accessed individually via the C<stack> method.
 
 =item plug PLUGIN [ LIST ]
 
-Takes a plugin, and calls it's C<init> with the supplied arguments. The return value is then fed to C<register>
+Takes a plugin, and calls it's C<init> with the supplied arguments. The return value is then fed to C<register>.
 
 =item plugins
 
@@ -422,9 +444,13 @@ Returns a hash ref, to a refhash. The keys are references to the plugins, and th
 
 Takes an export list and integrates it's context into the method tree. The plugin the export list represents will be the topmost.
 
+=item specific PLUGIN
+
+Returns a context object for a specific plugin. Like C<Context>'s C<next>, C<prev>, and C<offset>, only with a plugin instead of an index.
+
 =item stack METHOD
 
-Returns an array ref to a stack of plugins, for the method.
+Returns an array ref to a stack of plugins, for the method. The last element is considered the topmost plugin, which is counter intuitive, considering C<offset> works with higher indices being lower perceedence.
 
 =item unplug PLUGIN [ PLUGIN ... ]
 
@@ -433,6 +459,8 @@ Takes a reference to a plugin, and sweeps the method tree clean of any of it's o
 =item unregister EXPORTLIST [ EXPORTLIST ... ]
 
 Takes an export list, and unmerges it from the currently active one. If it's empty, calls C<unplug>. If something remains, it cleans out the stacks manually.
+
+This behavior may change, as a plugin which has no active methods might still need be available.
 
 =back
 
@@ -458,7 +486,7 @@ Grants access to the host object. Use C<$self->super->method> if you want to ove
 
 =item offset INTEGER
 
-Generates a new context, having to do with a plugin n steps away from this, to a certain direction. C<next> and C<prev> call C<offset> with -1 and 1 respectively. The offset object they return, has an autoloader which will search to see where the current plugin's instance is in the stack of a certain method, and then move a specified offset from that, and use the plugin in that slot.
+Generates a new context, having to do with a plugin n steps away from this, to a certain direction. C<next> and C<prev> call C<offset> with 1 and -1 respectively. The offset object they return, has an autoloader which will search to see where the current plugin's instance is in the stack of a certain method, and then move a specified offset from that, and use the plugin in that slot.
 
 =back
 
@@ -487,6 +515,8 @@ In order to get access to the plugin structure the plugin must call C<$self->sel
 C'est tout.
 
 =head1 DIAGNOSIS
+
+All errors are errors (e.g not warnings), and are thus fatal, and are produced with L<Carp>'s C<croak>. They can be trapped with C<eval> if necessary.
 
 =over 4
 
@@ -526,13 +556,25 @@ The method, requested for export by the export list, cannot be found via C<can> 
 
 Generated at C<register> time.
 
+=item %s is not plugged into %s
+
+When requesting a specific plugin to be used, and the plugin doesn't exist this happens.
+
+Generated at C<specific> time.
+
 =back
 
 =head1 CAVEATS
 
 =over 4
 
-=item The C<can> method (e.g. C<UNIVERSAL::can>) is depended on. Without it everything will break. If you try to plug something nonstandard into a host, and export something C<UNIVERSAL::can> won't say is there, implement C<can> yourself.
+=item *
+
+The implementation is by no means optimized. I doubt it's fast, but I don't really care. It's supposed to create a nice framework for a complex application. It's more efficient programming, not execution. This may be worked on a bit.
+
+=item *
+
+The C<can> method (e.g. C<UNIVERSAL::can>) is depended on. Without it everything will break. If you try to plug something nonstandard into a host, and export something C<UNIVERSAL::can> won't say is there, implement C<can> yourself.
 
 =back
 
@@ -546,7 +588,15 @@ Just you wait. See C<TODO> for what I have in stock!
 
 =item *
 
+Decide if C<unregister> should or shouldn't call C<unplug> if nothing of the plugin remains by the 0.02 release. Currently leaning towards "no".
+
+=item *
+
 Offset contexting AUTOLOADER needs to diet.
+
+=item *
+
+Since 5.8 is a prerequisite, use L<Scalar::Util> to cleanup references which shouldn't be strong.
 
 =back
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# $Id: OMPTest.pm,v 1.5 2003/12/03 02:16:20 nothingmuch Exp $
+# $Id: OMPTest.pm,v 1.7 2003/12/07 10:30:44 nothingmuch Exp $
 
 use strict;
 use warnings;
@@ -94,6 +94,55 @@ sub bar {
 	my $obj = shift;
 	$obj->add();
 	$self->prev->bar($obj);
+}
+
+package OMPTest::Plugin::Upset::Picky;
+
+use strict;
+use warnings;
+
+use base 'OMPTest::Plugin::Generic';
+
+sub new { $_[0]->SUPER::new(qw/bar foo gorch/) };
+
+sub foo {
+	my $self = shift;
+	my $obj = shift;
+	
+	foreach my $plugin (reverse @{ $self->super->stack('gorch') }){
+		next if $plugin == $self->self;
+		$self->super->specific($plugin)->gorch($obj);
+	}
+	
+	$obj->add();
+}
+
+sub bar { # returns
+	my $self = shift;
+	my $obj = shift;
+	
+	for (my $i = 1; $i <= $#{ $self->super->stack('gorch') }; $i++){
+		$self->offset($i)->gorch($obj);
+	}
+	
+	$obj->add();
+}
+
+sub gorch {} # never called
+
+package OMPTest::Plugin::Upset::Picky::AnotherGorch;
+
+use strict;
+use warnings;
+
+use base 'OMPTest::Plugin::Generic';
+
+sub new { $_[0]->SUPER::new(qw/gorch/) };
+
+sub gorch { ### returns
+	my $self = shift;
+	my $obj = shift;
+	$obj->add();
 }
 
 package OMPTest::Plugin::Nice::One;
@@ -359,7 +408,7 @@ __END__
 
 =head1 NAME
 
-OMPtest - a group of packages that help the testing process.
+OMPtest - A group of packages that help the testing process.
 
 =head1 SYNOPSIS
 
@@ -368,6 +417,32 @@ OMPtest - a group of packages that help the testing process.
 =head1 DESCRIPTION
 
 Just a heap of plugin implementations, and that sort of stuff.
+
+This is actually quite a useful source of example code. Most of the features of L<Object::Meta::Plugin> (the distribution, not the class) are exploited.
+
+=head1 CAVEATS
+
+None or many.
+
+=head1 BUGS
+
+=over 4
+
+=item *
+
+Documentation of the various elements is insufficient. This could be useful for a learn-by-example process.
+
+=back
+
+=head1 TODO
+
+=over 4
+
+=item *
+
+Have all the methods test what they're going to call with C<can>. This way the various C<can> implementations are tested to be working properly. Morever, the code refs can be passed down, and the next in line will check wether it is the same thing as what it should be. This can also prevent cases of dubious test deaths.
+
+=back
 
 =head1 COPYRIGHT & LICENSE
 
